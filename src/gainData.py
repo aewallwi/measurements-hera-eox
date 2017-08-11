@@ -8,7 +8,7 @@ import scipy.signal as signal
 import matplotlib.pyplot as plt
 import re as re
 import scipy.interpolate as interp
-
+import os
 
 '''
 A few transformation matrices for differential measurements
@@ -70,29 +70,81 @@ def readCSV(fileName,comment='',device='',dtype=['','']):
 
 #read single Anritsu CSV File
 def readAnritsuCSV(fname):
+    if DEBUG:
+        print(fname)
     data=[]
     readData=False
-    for line in open(fname).readLines():
-        if 'Frequency' in line:
-            readData=True
-            if 'MHz' in line:
-                funit=1e-3
+    if 'pha' in fname:
+        mode='PHASE'
+    else:
+        mode='AMP'
+    for line in open(fname).readlines():
+        if DEBUG:
+            print('readData='+str(readData))
         if readData:
+            if DEBUG:
+                print(line)
             lineSplit=line.split(',')
-            data.append([float(lineSplit[0][1:-1]),float(lineSplit[1][1:-1])])
-    data[:,0]*funit
-    return np.array(data)
+            try:
+                data.append([float(lineSplit[0][1:-1]),float(lineSplit[1][1:-3])])
+            except:
+                try:
+                    candidates=([float(lineSplit[6]),float(lineSplit[7])])
+                    if DEBUG:
+                        print(candidates)
+                        print(lineSplit[10]+'-'+lineSplit[11])
+                    if candidates[0]==0.:
+                        if mode=='PHASE':
+                            datapoint=float(lineSplit[11])
+                        else:
+                            datapoint=-candidates[1]
+                    else:
+                        if mode=='PHASE':
+                            datapoint=float(lineSplit[10])
+                        else:
+                            datapoint=-candidates[0]
+                    if DEBUG:
+                        print datapoint
+                    data.append([float(lineSplit[5][:-4]),datapoint])
+                except:
+                    if DEBUG:
+                        print('invalid file')
+        if 'Frequency' in line and ('S11' in line or 'S21' in line):
+            readData=True
+        if 'MHz' in line:
+            funit=1e-3
+    data=np.array(data)
+    if DEBUG:
+        print(data)
+    if(np.mod(len(data),2)==1):
+        data=data[:-1,:]
+    data[:,0]*=funit
+    return data
 
-def readAnritsu(fileName,comment=''):
+def readAnritsu(fname,comment=''):
     fname_amp=fname+'_amp.csv'
     fname_pha=fname+'_pha.csv'
-    freqs=fname_pha[:,0]
+    #check if pha exists. If not, look for phase instead
+    if not os.path.exists(fname_amp):
+        fname_amp=fname+'_log.csv'
+    #check if amp exists. If not, look for log instead
+    if not os.path.exists(fname_pha):
+        fname_pha=fname+'_phase.csv'
+        
     data_amp=readAnritsuCSV(fname_amp)
     data_pha=readAnritsuCSV(fname_pha)
-    data=10**(-data_amp[:,1]/10.)
+    freqs=data_pha[:,0]
+    data=10**(-data_amp[:,1]/20.)
+    #this is a return loss measurement so if
+    #the gain is positive there was almost
+    #certainly a sign errors in reading
+    #amplitudes and should be inverted. 
+    if np.abs(data).max()>=10.:
+        data=1./data
     data=data*np.exp(1j*np.radians(data_pha[:,1]))
-    meta=MetaData(device='Anritsu 2024A VNA',dtype=['FREQ','GHz'],dataRange=[freqs.min(),freqs.max(),len(freqs)],comment=comment)
-    
+    meta=MetaData(device='Anritsu 2024A VNA',dtype=['FREQ','GHz'],datarange=[freqs.min(),freqs.max(),len(freqs)],comment=comment)
+    return freqs,data,meta
+
 
 #Read S-parameter file supplied by Nicolas
 def readS1P(fileName,mode='simu',comment=''):
@@ -236,7 +288,7 @@ def readCSTS11(fileName,comment='',degrees=True):
     return fFactor*fAxis,data,meta
     
 
-FILETYPES=['CST_TimeTrace','CST_S11','VNAHP_S11','S11_CSV','S11_S1P']
+FILETYPES=['CST_TimeTrace','CST_S11','VNAHP_S11','S11_CSV','S11_S1P','ANRITSU_CSV']
 class GainData():
     def __init__(self,fileName,fileType,fMin=None,fMax=None,windowFunction=None,comment='',filterNegative=False,extrapolateBand=False):
         assert fileType in FILETYPES
@@ -418,7 +470,7 @@ def Balun():
     '''
     def __init__(self)
     self.diff_port_dict={'1':0,'c':1,'d':2}
-    def read_files(self,prefix,postfix,ext,filetype,portA='1',portB='2',portC='3',fMin=0.05,fMax=0.250):
+    def read_files(self,prefix,postfix,filetype,portA='1',portB='2',portC='3',fMin=0.05,fMax=0.250):
         '''
         initialize a balun object with a filename prefix, a postfix, and a filteype. This will create
         nine different gainData objects from files prefix_s<portA><portB>_postfix_amp/phase.(ext)
@@ -436,10 +488,9 @@ def Balun():
         self.fMin=fmin
         self.fMax=fMax
         self.s_matrix_list=[[GainData((prefix,
-                                       '_s%s%s_',
-                                       postfix,
-                                       ext)%(astr,
-                                             bstr),
+                                       's%s%s',
+                                       postfix)%(astr,
+                                                 bstr),
                                       filetype,
                                       fmin,
                                       fmax) for astr in self.portList] for astr in self.portList]
@@ -477,28 +528,28 @@ def Balun():
         to represent the balun corrected antenna measurement. 
         '''
         def __init__(self,ant_prefix,ant_postfix,
-                     balun_prefix,balun_postfix,ext,filetype,
+                     balun_prefix,balun_postfix,filetype,
                      portA_balun,portB_balun,portC_balun,fMin=0.05,fMax=0.25):
-        '''
-        '''
-        self.balun=Balun()
-        self.balun.read_files(balun_prefix,balun_postfix,ext,filetype,
-                              portA_balun,portB_balun,portC_balun,fMin,fMax)
-        self.antenna_raw=GainData(ant_prefix+'_s11_'+ant_postfix+ext,
-                                  filetype,fMin,fMax)
-        self.fAxis=self.antenna_raw.fAxis
-        self.antenna_gain_corrected_frequency=np.zeros_like(self.antenna_raw.gainFrequency)
-        self.antenna_gain_corrected_delay=np.zeros_like(self.antenna_raw.gain_Frequency)
-        self.nf=self.fAxis.shape[0]
-        measdiff_f=self.antenna_raw.gainFrequency-self.balun.get_ds('s11')
-        measdiff_t=self.antenna_raw.gainDelay-self.balun.get_ds(domain='delay')
-        self.antenna_gain_corrected_frequency=measdiff_f/\
-                                               (self.balun.get_ds('s1d')*self.balun.get_ds('sd1')+\
-                                                self.balun.get_ds('sdd')*measdiff_f)
-        self.antenna_gain_corrected_delay=meassdiff_t/\
-                                           (self.balun.get_ds('s1d',domain='delay')\
-                                            *self.balun.get_ds('sd1',domain='delay')+\
-                                            self.balun.get_ds('sdd',domain='delay')*meassdiff_t)
+            '''
+            '''
+            self.balun=Balun()
+            self.balun.read_files(balun_prefix,balun_postfix,filetype,
+                                  portA_balun,portB_balun,portC_balun,fMin,fMax)
+            self.antenna_raw=GainData(ant_prefix+'s11'+ant_postfix,
+                                      filetype,fMin,fMax)
+            self.fAxis=self.antenna_raw.fAxis
+            self.antenna_gain_corrected_frequency=np.zeros_like(self.antenna_raw.gainFrequency)
+            self.antenna_gain_corrected_delay=np.zeros_like(self.antenna_raw.gain_Frequency)
+            self.nf=self.fAxis.shape[0]
+            measdiff_f=self.antenna_raw.gainFrequency-self.balun.get_ds('s11')
+            measdiff_t=self.antenna_raw.gainDelay-self.balun.get_ds(domain='delay')
+            self.antenna_gain_corrected_frequency=measdiff_f/\
+                                                   (self.balun.get_ds('s1d')*self.balun.get_ds('sd1')+\
+                                                    self.balun.get_ds('sdd')*measdiff_f)
+            self.antenna_gain_corrected_delay=meassdiff_t/\
+                                               (self.balun.get_ds('s1d',domain='delay')\
+                                                *self.balun.get_ds('sd1',domain='delay')+\
+                                                self.balun.get_ds('sdd',domain='delay')*meassdiff_t)
         
         
         
