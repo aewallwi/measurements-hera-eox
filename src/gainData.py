@@ -416,7 +416,9 @@ def Balun():
     '''
     This is an object designed to represent a balun measurement. It includes a list of nine single ended VNA measurements.
     '''
-    def ___init__(self,prefix,postfix,ext,filetype,portA='1',portB='2',portC='3',fMin=0.05,fMax=0.250):
+    def __init__(self)
+    self.diff_port_dict={'1':0,'c':1,'d':2}
+    def read_files(self,prefix,postfix,ext,filetype,portA='1',portB='2',portC='3',fMin=0.05,fMax=0.250):
         '''
         initialize a balun object with a filename prefix, a postfix, and a filteype. This will create
         nine different gainData objects from files prefix_s<portA><portB>_postfix_amp/phase.(ext)
@@ -430,7 +432,6 @@ def Balun():
         portB, string in s-matrix corresponding to balanced terminal 1
         portC, string in s-matrix corresponding to balanced terminal 2
         '''
-        self.diff_port_dict={'1':0,'c':1,'d':2}
         self.portList=[portA,portB,portC]
         self.fMin=fmin
         self.fMax=fMax
@@ -477,6 +478,27 @@ def Balun():
         '''
         def __init__(self,ant_prefix,ant_postfix,
                      balun_prefix,balun_postfix,ext,filetype,
-                     portA_balun,portB_balun,fMin=0.05,fMax=0.25):
+                     portA_balun,portB_balun,portC_balun,fMin=0.05,fMax=0.25):
         '''
-
+        '''
+        self.balun=Balun()
+        self.balun.read_files(balun_prefix,balun_postfix,ext,filetype,
+                              portA_balun,portB_balun,portC_balun,fMin,fMax)
+        self.antenna_raw=GainData(ant_prefix+'_s11_'+ant_postfix+ext,
+                                  filetype,fMin,fMax)
+        self.fAxis=self.antenna_raw.fAxis
+        self.antenna_gain_corrected_frequency=np.zeros_like(self.antenna_raw.gainFrequency)
+        self.antenna_gain_corrected_delay=np.zeros_like(self.antenna_raw.gain_Frequency)
+        self.nf=self.fAxis.shape[0]
+        measdiff_f=self.antenna_raw.gainFrequency-self.balun.get_ds('s11')
+        measdiff_t=self.antenna_raw.gainDelay-self.balun.get_ds(domain='delay')
+        self.antenna_gain_corrected_frequency=measdiff_f/\
+                                               (self.balun.get_ds('s1d')*self.balun.get_ds('sd1')+\
+                                                self.balun.get_ds('sdd')*measdiff_f)
+        self.antenna_gain_corrected_delay=meassdiff_t/\
+                                           (self.balun.get_ds('s1d',domain='delay')\
+                                            *self.balun.get_ds('sd1',domain='delay')+\
+                                            self.balun.get_ds('sdd',domain='delay')*meassdiff_t)
+        
+        
+        
