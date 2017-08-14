@@ -9,7 +9,7 @@ import matplotlib.pyplot as plt
 import re as re
 import scipy.interpolate as interp
 import os
-
+DEBUG=False
 '''
 A few transformation matrices for differential measurements
 '''
@@ -19,7 +19,7 @@ TMAT3=np.sqrt(0.5)*np.array([[1,0,0],[0,1,1],[0,1,-1]]).astype(complex)
 #transform a matrix
 #************************************************************
 def transform_matrix(matrix,tmatrix):
-    return tmatrix.dot(matrix.dot(np.linal.inverse(tmatrix)))
+    return tmatrix.dot(matrix.dot(np.linalg.inv(tmatrix)))
 
 
 #************************************************************
@@ -37,7 +37,12 @@ def ftUK(times,data):
 
 
 class MetaData():
-    def __init__(self,device='',date='',dtype='',comment='',datarange=[]):
+    def __init__(self):
+        self.device=''
+        self.data=''
+        self.comment=''
+        self.datarange=''
+    def set_info(self,device='',date='',dtype='',comment='',datarange=[]):
         self.device=device
         self.date=date
         self.dtype=dtype
@@ -65,7 +70,8 @@ def readCSV(fileName,comment='',device='',dtype=['','']):
     fAxis*=1e-9
     FLOW=fAxis[0]
     FHIGH=fAxis[-1]
-    meta=MetaData(device=device,dtype=dtype,datarange=[FLOW,FHIGH,NDATA],comment=comment)
+    meta=MetaData()
+    meta.set_info(device=device,dtype=dtype,datarange=[FLOW,FHIGH,NDATA],comment=comment)
     return fAxis,data,meta
 
 #read single Anritsu CSV File
@@ -79,6 +85,8 @@ def readAnritsuCSV(fname):
     else:
         mode='AMP'
     for line in open(fname).readlines():
+        if '#' in line:
+            readData=False
         if DEBUG:
             print('readData='+str(readData))
         if readData:
@@ -87,29 +95,32 @@ def readAnritsuCSV(fname):
             lineSplit=line.split(',')
             try:
                 data.append([float(lineSplit[0][1:-1]),float(lineSplit[1][1:-3])])
-            except:
-                try:
-                    candidates=([float(lineSplit[6]),float(lineSplit[7])])
-                    if DEBUG:
-                        print(candidates)
-                        print(lineSplit[10]+'-'+lineSplit[11])
-                    if candidates[0]==0.:
-                        if mode=='PHASE':
-                            datapoint=float(lineSplit[11])
-                        else:
-                            datapoint=-candidates[1]
+            except ValueError:
+                if DEBUG:
+                    print('Using Master Tools Format.')
+                    print('lineSplit='+str(lineSplit))
+                candidates=([float(lineSplit[6]),float(lineSplit[7])])
+                if DEBUG:
+                    print('candidates='+str(candidates))
+                    print(lineSplit[10]+'-'+lineSplit[11])
+                if candidates[0]==0.:
+                    if mode=='PHASE':
+                        datapoint=float(lineSplit[11])
                     else:
-                        if mode=='PHASE':
-                            datapoint=float(lineSplit[10])
-                        else:
-                            datapoint=-candidates[0]
-                    if DEBUG:
-                        print datapoint
-                    data.append([float(lineSplit[5][:-4]),datapoint])
-                except:
-                    if DEBUG:
-                        print('invalid file')
-        if 'Frequency' in line and ('S11' in line or 'S21' in line):
+                        datapoint=candidates[1]
+                else:
+                    if mode=='PHASE':
+                        datapoint=float(lineSplit[10])
+                    else:
+                        datapoint=candidates[0]
+                if DEBUG:
+                    print datapoint
+                data.append([float(lineSplit[5][:-4]),datapoint])
+                #except:
+                #    if DEBUG:
+                #        print('invalid file')
+        #if 'Frequency' in line and ('S11' in line or 'S21' in line):
+        if 'Point,S11.Real,S11.Imag,S21.Real,S21.Imag,Frequency,RL/S11.Log.Mag,RL/S21.Log.Mag,S11.Mag,S11.Phase,S21.Mag,S21.Phase' in line:
             readData=True
         if 'MHz' in line:
             funit=1e-3
@@ -130,7 +141,11 @@ def readAnritsu(fname,comment=''):
     #check if amp exists. If not, look for log instead
     if not os.path.exists(fname_pha):
         fname_pha=fname+'_phase.csv'
-        
+    if not (os.path.exists(fname_pha) and os.path.exists(fname_amp)):
+        raise ValueError(('Could not find phase %s '
+                          'or amplitude %s')%(fname_amp,fname_pha))
+    print fname_pha
+    print fname_amp
     data_amp=readAnritsuCSV(fname_amp)
     data_pha=readAnritsuCSV(fname_pha)
     freqs=data_pha[:,0]
@@ -142,7 +157,8 @@ def readAnritsu(fname,comment=''):
     if np.abs(data).max()>=10.:
         data=1./data
     data=data*np.exp(1j*np.radians(data_pha[:,1]))
-    meta=MetaData(device='Anritsu 2024A VNA',dtype=['FREQ','GHz'],datarange=[freqs.min(),freqs.max(),len(freqs)],comment=comment)
+    meta=MetaData()
+    meta.set_info(device='Anritsu 2024A VNA',dtype=['FREQ','GHz'],datarange=[freqs.min(),freqs.max(),len(freqs)],comment=comment)
     return freqs,data,meta
 
 
@@ -182,7 +198,8 @@ def readS1P(fileName,mode='simu',comment=''):
         device='CST'
     else:
         device='DifferentialVNA'
-    meta=MetaData(device=device,dtype=['FREQ',fUnit],datarange=[freqs.min(),freqs.max(),len(freqs)],comment=comment)
+    meta=MetaData()
+    meta.set_info(device=device,dtype=['FREQ',fUnit],datarange=[freqs.min(),freqs.max(),len(freqs)],comment=comment)
     return freqs,data,meta
             
     
@@ -198,7 +215,8 @@ def readVNAHP(fileName,comment=''):
     data=np.loadtxt(fileName,skiprows=9,delimiter=',')
     device=dataLines[1][:-2]
     dtype=dataLines[4].split()[1]
-    meta=MetaData(device=device,dtype=['FREQ',dtype],datarange=[FLOW,FHIGH,NDATA],comment=comment)
+    meta=MetaData()
+    meta.set_info(device=device,dtype=['FREQ',dtype],datarange=[FLOW,FHIGH,NDATA],comment=comment)
     fAxis=np.arange(NDATA)*(FHIGH-FLOW)/NDATA+FLOW
     return fAxis,data[:,0]+1j*data[:,1],meta
 
@@ -258,7 +276,8 @@ def readCSTTimeTrace(fileName,comment=''):
         outputTrace1=outputTrace1[:-1,:]
         outputTrace2=outputTrace2[:-1,:]
         inputTrace=inputTrace[:-1,:]
-    meta=MetaData(device='CST',dtype=['TIME',dtype],datarange=[inputTrace[:,0].min(),inputTrace[:,0].max(),len(inputTrace[:,0])],comment=comment)
+    meta=MetaData()
+    meta.set_info(device='CST',dtype=['TIME',dtype],datarange=[inputTrace[:,0].min(),inputTrace[:,0].max(),len(inputTrace[:,0])],comment=comment)
     return [inputTrace,outputTrace1,outputTrace2],meta
     
 def readCSTS11(fileName,comment='',degrees=True):
@@ -284,13 +303,17 @@ def readCSTS11(fileName,comment='',degrees=True):
     if(degrees):
         pha*=np.pi/180.
     data=amp*np.exp(1j*pha)
-    meta=MetaData(device='CST',dtype=['FREQ','S11'],datarange=[fAxis.min(),fAxis.max(),len(fAxis)],comment=comment)
+    meta=MetaData()
+    meta.set_info(device='CST',dtype=['FREQ','S11'],datarange=[fAxis.min(),fAxis.max(),len(fAxis)],comment=comment)
     return fFactor*fAxis,data,meta
     
 
 FILETYPES=['CST_TimeTrace','CST_S11','VNAHP_S11','S11_CSV','S11_S1P','ANRITSU_CSV']
 class GainData():
-    def __init__(self,fileName,fileType,fMin=None,fMax=None,windowFunction=None,comment='',filterNegative=False,extrapolateBand=False):
+    def __init__(self):
+        self.metaData=MetaData()
+        
+    def read_files(self,fileName,fileType,fMin=None,fMax=None,windowFunction=None,comment='',filterNegative=False,extrapolateBand=False):
         assert fileType in FILETYPES
         if(windowFunction is None):
             windowFunction = 'blackman-harris'
@@ -308,6 +331,8 @@ class GainData():
             self.fAxis,self.gainFrequency,self.metaData=readCSV(fileName,comment=comment)
         elif(fileType=='S11_S1P'):
             self.fAxis,self.gainFrequency,self.metaData=readS1P(fileName,comment=comment)
+        elif(fileType=='ANRITSU_CSV'):
+            self.fAxis,self.gainFrequency,self.metaData=readAnritsu(fileName,comment=comment)
         if(fMin is None):
             fMin=self.fAxis.min()            
         if(fMax is None):
@@ -464,12 +489,14 @@ class GainData():
             return fAxis_interp,band_interp_f
         
         
-def Balun():
+class Balun():
     '''
     This is an object designed to represent a balun measurement. It includes a list of nine single ended VNA measurements.
     '''
-    def __init__(self)
-    self.diff_port_dict={'1':0,'c':1,'d':2}
+    def __init__(self):
+        self.diff_port_dict={'1':0,'c':1,'d':2}
+        self.s_matrix_list=[[GainData() for m in range(3)] for n in range(3)]
+
     def read_files(self,prefix,postfix,filetype,portA='1',portB='2',portC='3',fMin=0.05,fMax=0.250):
         '''
         initialize a balun object with a filename prefix, a postfix, and a filteype. This will create
@@ -485,15 +512,18 @@ def Balun():
         portC, string in s-matrix corresponding to balanced terminal 2
         '''
         self.portList=[portA,portB,portC]
-        self.fMin=fmin
+        self.fMin=fMin
         self.fMax=fMax
-        self.s_matrix_list=[[GainData((prefix,
-                                       's%s%s',
-                                       postfix)%(astr,
-                                                 bstr),
-                                      filetype,
-                                      fmin,
-                                      fmax) for astr in self.portList] for astr in self.portList]
+        astr_list=[portA,portB,portC]
+        bstr_list=[portA,portB,portC]
+        for m,astr in enumerate(astr_list):
+            for n,bstr in enumerate(bstr_list):
+                fstr=(prefix+'s%s%s'+postfix)%(astr,bstr)
+                if DEBUG:
+                    print('file=%s'%fstr)
+                self.s_matrix_list[m][n].read_files(fstr,filetype,fMin,fMax)
+        if DEBUG:
+            print self.s_matrix_list
         self.fAxis=self.s_matrix_list[0][0].fAxis
         self.nf=len(self.fAxis)
         self.df=self.fAxis[1]-self.fAxis[0]
@@ -501,17 +531,17 @@ def Balun():
         self.s_matrix_delay=np.zeros_like(self.s_matrix_frequency)
         self.s_matrix_frequency_diff=np.zeros_like(self.s_matrix_frequency)
         self.s_matrix_delay_diff=np.zeros_like(self.s_matrix_delay)
-        for chan in self.nf:
+        for chan in range(self.nf):
             for ind_a in range(3):
                 for ind_b in range(3):
                     self.s_matrix_frequency[chan,m,n]=self.s_matrix_list[m][n].gainFrequency[chan]
                     self.s_matrix_delay[chan,m,n]=self.s_matrix_list[m][n].gainDelay[chan]
             self.s_matrix_frequency_diff[chan]=transform_matrix(self.s_matrix_frequency[chan],TMAT3)
-            self.s_matrix_delay_diff[chan]=wtransform_matrix(self.s_matrix_delay[chan],TMAT3)
+            self.s_matrix_delay_diff[chan]=transform_matrix(self.s_matrix_delay[chan],TMAT3)
             
-    def get_ds(idstr,domain='frequency',chans=None):
+    def get_ds(self,idstr,domain='frequency',chans=None):
         if chans is None:
-            chan_select=[m for m in range(nf)]
+            chan_select=[m for m in range(self.nf)]
         porta=self.diff_port_dict[idstr[1]]
         portb=self.diff_port_dict[idstr[2]]
         if domain=='frequency':
@@ -520,36 +550,36 @@ def Balun():
             return self.s_matrix_delay_diff[chan_select,porta,portb]
         
             
-    def AntennaBalunMeasurement():
-        '''
-        Object representing a measurement of antenna s-matrix using a balun. 
-        Contains a balun object along with a single gain data object to 
-        represent the raw antenna measurement and another gain data object 
-        to represent the balun corrected antenna measurement. 
-        '''
-        def __init__(self,ant_prefix,ant_postfix,
-                     balun_prefix,balun_postfix,filetype,
-                     portA_balun,portB_balun,portC_balun,fMin=0.05,fMax=0.25):
-            '''
-            '''
-            self.balun=Balun()
-            self.balun.read_files(balun_prefix,balun_postfix,filetype,
-                                  portA_balun,portB_balun,portC_balun,fMin,fMax)
-            self.antenna_raw=GainData(ant_prefix+'s11'+ant_postfix,
-                                      filetype,fMin,fMax)
-            self.fAxis=self.antenna_raw.fAxis
-            self.antenna_gain_corrected_frequency=np.zeros_like(self.antenna_raw.gainFrequency)
-            self.antenna_gain_corrected_delay=np.zeros_like(self.antenna_raw.gain_Frequency)
-            self.nf=self.fAxis.shape[0]
-            measdiff_f=self.antenna_raw.gainFrequency-self.balun.get_ds('s11')
-            measdiff_t=self.antenna_raw.gainDelay-self.balun.get_ds(domain='delay')
-            self.antenna_gain_corrected_frequency=measdiff_f/\
-                                                   (self.balun.get_ds('s1d')*self.balun.get_ds('sd1')+\
-                                                    self.balun.get_ds('sdd')*measdiff_f)
-            self.antenna_gain_corrected_delay=meassdiff_t/\
-                                               (self.balun.get_ds('s1d',domain='delay')\
-                                                *self.balun.get_ds('sd1',domain='delay')+\
-                                                self.balun.get_ds('sdd',domain='delay')*meassdiff_t)
+class AntennaBalunMeasurement():
+    '''
+    Object representing a measurement of antenna s-matrix using a balun. 
+    Contains a balun object along with a single gain data object to 
+    represent the raw antenna measurement and another gain data object 
+    to represent the balun corrected antenna measurement. 
+    '''
+    def __init__(self):
+        self.balun=Balun()
+        self.antenna_raw=GainData()
+    def read_files(self,ant_prefix,ant_postfix,
+                   balun_prefix,balun_postfix,filetype,
+                   portA_balun,portB_balun,portC_balun,fMin=0.05,fMax=0.25):
+        self.balun.read_files(balun_prefix,balun_postfix,filetype,
+                              portA_balun,portB_balun,portC_balun,fMin,fMax)
+        self.antenna_raw.read_files(ant_prefix+'s11'+ant_postfix,
+                                    filetype,fMin,fMax)
+        self.fAxis=self.antenna_raw.fAxis
+        self.antenna_gain_corrected_frequency=np.zeros_like(self.antenna_raw.gainFrequency)
+        self.antenna_gain_corrected_delay=np.zeros_like(self.antenna_raw.gainFrequency)
+        self.nf=self.fAxis.shape[0]
+        measdiff_f=self.antenna_raw.gainFrequency-self.balun.get_ds('s11')
+        measdiff_t=self.antenna_raw.gainDelay-self.balun.get_ds('s11',domain='delay')
+        self.antenna_gain_corrected_frequency=measdiff_f/\
+                                               (self.balun.get_ds('s1d')*self.balun.get_ds('sd1')+\
+                                                self.balun.get_ds('sdd')*measdiff_f)
+        self.antenna_gain_corrected_delay=measdiff_t/\
+                                           (self.balun.get_ds('s1d',domain='delay')\
+                                            *self.balun.get_ds('sd1',domain='delay')+\
+                                            self.balun.get_ds('sdd',domain='delay')*measdiff_t)
         
         
         
