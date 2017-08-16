@@ -80,7 +80,8 @@ def readAnritsuCSV(fname):
         print(fname)
     data=[]
     readData=False
-    if 'pha' in fname:
+    print fname
+    if '_pha' in fname:
         mode='PHASE'
     else:
         mode='AMP'
@@ -105,12 +106,12 @@ def readAnritsuCSV(fname):
                     print(lineSplit[10]+'-'+lineSplit[11])
                 if candidates[0]==0.:
                     if mode=='PHASE':
-                        datapoint=float(lineSplit[11])
+                        datapoint=float(lineSplit[10])
                     else:
                         datapoint=candidates[1]
                 else:
                     if mode=='PHASE':
-                        datapoint=float(lineSplit[10])
+                        datapoint=float(lineSplit[9])
                     else:
                         datapoint=candidates[0]
                 if DEBUG:
@@ -149,14 +150,15 @@ def readAnritsu(fname,comment=''):
     data_amp=readAnritsuCSV(fname_amp)
     data_pha=readAnritsuCSV(fname_pha)
     freqs=data_pha[:,0]
-    data=10**(-data_amp[:,1]/20.)
+    data=10**(data_amp[:,1]/20.)
     #this is a return loss measurement so if
     #the gain is positive there was almost
     #certainly a sign errors in reading
     #amplitudes and should be inverted. 
-    if np.abs(data).max()>=10.:
-        data=1./data
+    #if np.abs(data).max()>=10.:
+    #    data=1./data
     data=data*np.exp(1j*np.radians(data_pha[:,1]))
+    print data
     meta=MetaData()
     meta.set_info(device='Anritsu 2024A VNA',dtype=['FREQ','GHz'],datarange=[freqs.min(),freqs.max(),len(freqs)],comment=comment)
     return freqs,data,meta
@@ -339,8 +341,9 @@ class GainData():
             fMax=self.fAxis.max()
 
         if(extrapolateBand):
-            print self.fAxis.min()
-            print self.fAxis.max()
+            if DEBUG:
+                print(self.fAxis.min())
+                print(self.fAxis.max())
             if(fMin<self.fAxis.min()):
                 fitSelection=self.fAxis<self.fAxis.min()+.01
                 pReal=np.polyfit(self.fAxis[fitSelection],np.real(self.gainFrequency[fitSelection]),1)
@@ -495,6 +498,7 @@ class Balun():
     '''
     def __init__(self):
         self.diff_port_dict={'1':0,'c':1,'d':2}
+        self.port_dict={'1':0,'2':1,'3':2}
         self.s_matrix_list=[[GainData() for m in range(3)] for n in range(3)]
 
     def read_files(self,prefix,postfix,filetype,portA='1',portB='2',portC='3',fMin=0.05,fMax=0.250):
@@ -548,6 +552,16 @@ class Balun():
             return self.s_matrix_frequency_diff[chan_select,porta,portb]
         else:
             return self.s_matrix_delay_diff[chan_select,porta,portb]
+
+    def get_ss(self,idstr,domain='frequency',chans=None):
+        if chans is None:
+            chan_select=[m for m in range(self.nf)]
+        porta=self.port_dict[idstr[1]]
+        portb=self.port_dict[idstr[2]]
+        if domain=='frequency':
+            return self.s_matrix_frequency[chan_select,porta,portb]
+        else:
+            return self.s_matrix_delay[chan_select,porta,portb]
         
             
 class AntennaBalunMeasurement():
