@@ -602,6 +602,7 @@ class AntennaBalunMeasurement():
         self.antenna_raw.read_files(ant_prefix+'s11'+ant_postfix,
                                     filetype,fMin,fMax)
         self.fAxis=self.antenna_raw.fAxis
+        self.tAxis=self.antenna_raw.tAxis
         self.antenna_gain_corrected_frequency=np.zeros_like(self.antenna_raw.gainFrequency)
         self.antenna_gain_corrected_delay=np.zeros_like(self.antenna_raw.gainFrequency)
         self.nf=self.fAxis.shape[0]
@@ -615,5 +616,27 @@ class AntennaBalunMeasurement():
                                             *self.balun.get_ds('sd1',domain='delay')+\
                                             self.balun.get_ds('sdd',domain='delay')*measdiff_t)
         
+    
+class AntennaDiffMeasurement():
+    '''
+    object represents measurement of differential antenna parameters with no balun. 
+    '''
+    def __init__(self):
+        self.unbalanced_list=[[GainData() for m in range(2)] for n in range(2)]
+    def read_files(self,ant_prefix,ant_postfix,filetype,fMin=0.05,fMax=0.25):
+        for a,astr in enumerate(['1','2']):
+            for b,bstr in enumerate(['1','2']):
+                self.unbalanced_list[a][b].read_files(ant_prefix+'s%s%s'%(astr,bstr)+ant_postfix,
+                                            filetype,fMin,fMax)
+        self.fAxis=self.unbalanced_list[0][0].fAxis
+        self.tAxis=self.unbalanced_list[0][0].tAxis
+        self.antenna_gain_frequency=np.zeros_like(self.unbalanced_list[0][0].gainFrequency)
+        self.antenna_gain_delay=np.zeros_like(self.unbalanced_list[0][0].gainFrequency)
+        self.nf=self.fAxis.shape[0]
+        for chan in range(self.nf):
+            self.antenna_gain_frequency[chan]=.5*(self.unbalanced_list[0][0].gainFrequency[chan]+self.unbalanced_list[1][1].gainFrequency[chan]\
+                                                  -self.unbalanced_list[1][0].gainFrequency[chan]-self.unbalanced_list[0][1].gainFrequency[chan])
+            self.antenna_gain_delay[chan]=.5*(self.unbalanced_list[0][0].gainDelay[chan]+self.unbalanced_list[1][1].gainDelay[chan]\
+                                              -self.unbalanced_list[1][0].gainDelay[chan]-self.unbalanced_list[0][1].gainDelay[chan])
         
-        
+
