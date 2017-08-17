@@ -303,7 +303,14 @@ def readCSTTimeTrace(fileName,comment=''):
     
 def readCSTS11(fileName,comment='',degrees=True):
     dB=False
-    header=open(fileName+'_abs.txt').readlines()[:2]
+    fname_abs=fileName+'_abs.txt'
+    fname_pha=fileName+'_pha.txt'
+    if not os.path.exists(fname_abs):
+        fname_abs=fileName+'_amp.txt'
+    #check if amp exists. If not, look for log instead
+    if not os.path.exists(fname_pha):
+        fname_pha=fileName+'_phase.txt'
+    header=open(fname_abs).readlines()[:2]
     if('MHz' in header[0]):
         fFactor=1e-3
     elif('GHz' in header[0]):
@@ -314,13 +321,13 @@ def readCSTS11(fileName,comment='',degrees=True):
         fFactor=1e-9
     if('dB' in header[0]):
         dB=True
-    amp=np.loadtxt(fileName+'_abs.txt',skiprows=2)
+    amp=np.loadtxt(fname_abs,skiprows=2)
     fAxis=amp[:,0]
     amp=amp[:,1]
     if(dB):
         amp=10.**(amp/20.)
 
-    pha=np.loadtxt(fileName+'_pha.txt',skiprows=2)[:,1]
+    pha=np.loadtxt(fname_pha,skiprows=2)[:,1]
     if(degrees):
         pha*=np.pi/180.
     data=amp*np.exp(1j*pha)
