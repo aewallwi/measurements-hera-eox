@@ -62,17 +62,10 @@ pha_s11_cam=np.unwrap(np.angle(cambridge_balun.antenna_raw.gainFrequency))
 pha_s11_no_balun=np.unwrap(np.angle(no_balun.antenna_gain_frequency))
 pha_s11_sim=np.unwrap(np.angle(simulation.gainFrequency))
 
-
-
-#db_sim=10.*np.log10(np.abs(sim_s11))
-
-
 fig1=plt.figure()
 fig2=plt.figure()
 ax1=fig1.add_axes([.1,.1,.8,.8])
 ax2=fig2.add_axes([.1,.1,.8,.8])
-
-
 
 ax1.plot(hybrid_coupler_A.fAxis,db_s11_A,color='k',ls='--')
 ax1.plot(hybrid_coupler_A.fAxis,db_s11_A_corr,color='k',label='Balun A Corrected')
@@ -85,22 +78,10 @@ ax1.plot(simulation.fAxis,db_s11_sim,color='k',lw=5,label='Simulation')
 ax1.grid()
 fig1.set_size_inches(10,6)
 ax1.set_xlabel('frequency (GHz)')
-ax1.set_ylabel('|S_{11}| (dB)')
+ax1.set_ylabel('|S$_{11}$| (dB)')
 ax1.legend(loc='best')
-#ax1.plot(sim_freq,db_sim)
 
 plotstrs=['s11','s1d','sd1','sdd','s1c','sc1','scc','scd','sdc']
-#plotstrs=['s11','s12','s13','s21','s22','s23','s31','s32','s33']
-#plotstrs=['s11']
-#for dstring in plotstrs:
-#    print dstring
-#    y=np.abs(hybrid_coupler_A.balun.get_ds(dstring))
-#    print y
-#    y=10.*np.log10(y)
-#    x=hybrid_coupler_A.balun.fAxis
-#    ax2.plot(x,y,label=dstring)
-#ax2.legend(loc='best')
-#ax2.grid()
 
 ax2.plot(hybrid_coupler_A.fAxis,pha_s11_A,color='k',ls='--')
 ax2.plot(hybrid_coupler_A.fAxis,pha_s11_A_corr,color='k',label='Balun A Corrected')
