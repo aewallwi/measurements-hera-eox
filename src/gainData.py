@@ -153,14 +153,14 @@ def readAnritsuCSV(fname):
     return data
 
 def readAnritsu(fname,comment=''):
-    fname_amp=fname+'_amp.csv'
-    fname_pha=fname+'_pha.csv'
+    fname_amp=fname+'amp.csv'
+    fname_pha=fname+'pha.csv'
     #check if pha exists. If not, look for phase instead
     if not os.path.exists(fname_amp):
-        fname_amp=fname+'_log.csv'
+        fname_amp=fname+'log.csv'
     #check if amp exists. If not, look for log instead
     if not os.path.exists(fname_pha):
-        fname_pha=fname+'_phase.csv'
+        fname_pha=fname+'phase.csv'
     if not (os.path.exists(fname_pha) and os.path.exists(fname_amp)):
         raise ValueError(('Could not find phase %s '
                           'or amplitude %s')%(fname_amp,fname_pha))
@@ -610,18 +610,18 @@ class AntennaBalunMeasurement():
                                     filetype,fMin,fMax)
         self.fAxis=self.antenna_raw.fAxis
         self.tAxis=self.antenna_raw.tAxis
-        self.antenna_gain_corrected_frequency=np.zeros_like(self.antenna_raw.gainFrequency)
-        self.antenna_gain_corrected_delay=np.zeros_like(self.antenna_raw.gainFrequency)
+        self.antenna_gain_frequency=np.zeros_like(self.antenna_raw.gainFrequency)
+        self.antenna_gain_delay=np.zeros_like(self.antenna_raw.gainFrequency)
         self.nf=self.fAxis.shape[0]
         measdiff_f=self.antenna_raw.gainFrequency-self.balun.get_ds('s11')
         measdiff_t=self.antenna_raw.gainDelay-self.balun.get_ds('s11',domain='delay')
-        self.antenna_gain_corrected_frequency=measdiff_f/\
-                                               (self.balun.get_ds('s1d')*self.balun.get_ds('sd1')+\
-                                                self.balun.get_ds('sdd')*measdiff_f)
-        self.antenna_gain_corrected_delay=measdiff_t/\
-                                           (self.balun.get_ds('s1d',domain='delay')\
-                                            *self.balun.get_ds('sd1',domain='delay')+\
-                                            self.balun.get_ds('sdd',domain='delay')*measdiff_t)
+        self.antenna_gain_frequency=measdiff_f/\
+                                     (self.balun.get_ds('s1d')*self.balun.get_ds('sd1')+\
+                                      self.balun.get_ds('sdd')*measdiff_f)
+        self.antenna_gain_delay=measdiff_t/\
+                                 (self.balun.get_ds('s1d',domain='delay')\
+                                  *self.balun.get_ds('sd1',domain='delay')+\
+                                  self.balun.get_ds('sdd',domain='delay')*measdiff_t)
         
     
 class AntennaDiffMeasurement():
