@@ -14,10 +14,21 @@ parser.add_argument('--input','-i',
                           'and baluns.'))
 parser.add_argument('--output','-o',
                     dest='output',type=str,
-                    help='Name of output plot file. default=None')
-opts=parser.parse_args()
+                    help=('Name of output plot file. default=None'
+                          'If None, no plots saved.'),default=None)
+parser.add_argument('--domain','-d',
+                    dest='domain',type=str
+                    help=('Domain of measurement.'),default='freq')
+parser.add_argument('--min','-l',dest='fmin',type=float,
+                    help=('minimum frequency'),default=0.05)
+parser.add_argument('--max','-u',dest='fmax',type=float,
+                    help=('maximum frequency'),default=0.25)
 
+opts=parser.parse_args()
 configfile=parser.input
+fmin=parser.fmin
+fmax=parser.fmax
+
 
 prefixes=[]
 postfixes=[]
@@ -48,16 +59,29 @@ for line in config_lines:
 
 
 
-simulation=GD()
-simulation.read_files('../August30thSinuousFeedOverDish/Simulation/S11_0.80-30-175_dish-imp-100-band_no-skirt-1.2-0.3-backplane-50-0.99','CST_S11',fMin=0.05,fMax=0.25)
-simulation.gainFrequency=simulation.gainFrequency
-db_s11_sim=10.*np.log10(np.abs(simulation.gainFrequency))
-pha_s11_sim=np.angle(simulation.gainFrequency)
 
 fig1=plt.figure()
 fig2=plt.figure()
 ax1=fig1.add_axes([.1,.1,.8,.8])
 ax2=fig2.add_axes([.1,.1,.8,.8])
+
+
+for (prefix,postfix,
+     prefixb,postfixb,
+     filetype,meastype,
+     label,color,lw) in zip(prefixes,postfixes,
+                            prefixesb,postfixesb,
+                            filtetypes,meastypes,
+                            labels,colors,linewidths):
+    if meastype=='simulation':
+        simulation=GD()
+        simulation.read_files(prefix+postfix,filetype,fmin=fmin,fmax=fmax)
+        simulation.read_files(prefix+postfix,filetype,fMin=fmax,fMax=fmin)
+        simulation.gainFrequency=simulation.gainFrequency
+        db_s11_sim=10.*np.log10(np.abs(simulation.gainFrequency))
+        pha_s11_sim=np.angle(simulation.gainFrequency)
+        ax1.plot(simulation.fAxis,db_s11_sim,color=color,lw=lw,label=label)
+        ax2.plot(simulation.fAxis,pha_s11_sim,color=color,lw=lw,label=label)
 
 
 for fnum,fname in enumerate(filenames):
@@ -76,13 +100,11 @@ for fnum,fname in enumerate(filenames):
     ax2.plot(hybrid_coupler_B.fAxis,pha_s11_B_corr,color=colors[fnum],label='Balun B Corrected')
 
 
-ax1.plot(simulation.fAxis,db_s11_sim,color='k',lw=5,label='Simulation')
 ax1.grid()
 fig1.set_size_inches(10,6)
 ax1.set_xlabel('frequency (GHz)')
 ax1.set_ylabel('|S$_{11}$| (dB)')
 ax1.legend(loc='best')
-ax2.plot(simulation.fAxis,pha_s11_sim,color='k',lw=5,label='Simulation')
 ax2.grid()
 fig2.set_size_inches(10,6)
 ax2.set_xlabel('frequency (GHz)')
