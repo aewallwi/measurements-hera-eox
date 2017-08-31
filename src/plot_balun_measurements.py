@@ -65,23 +65,31 @@ for dstring in plotstrs:
     x=hybrid_coupler_A_me.fAxis
     ax3.plot(x,y,label=dstring)
 for dstring in plotstrs:
+    print dstring
     y=np.abs(cambridge_balun.get_ds(dstring))
     y=10.*np.log10(y)
+    print y
     x=cambridge_balun.fAxis
     ax4.plot(x,y,label=dstring)
-    
+
 
 ax2.legend(loc='best')
 ax2.grid()
+ax2.set_title('Hybrid Coupler B')
 ax1.legend(loc='best')
 ax1.grid()
+ax1.set_title('Hybrid Coupler A')
 ax3.legend(loc='best')
 ax3.grid()
 ax4.legend(loc='best')
 ax4.grid()
-ax1.set_ylim(-30,1)
-ax2.set_ylim(-30,1)
-ax3.set_ylim(-30,1)
-ax4.set_ylim(-40,1)
+ax4.set_title('Cambridge Balun')
+ax1.set_ylim(-30,5)
+ax2.set_ylim(-30,5)
+ax3.set_ylim(-30,5)
+ax4.set_ylim(-30,5)
+fig1.savefig('hybrid_coupler_A.png')
+fig2.savefig('hybrid_coupler_B.png')
+fig4.savefig('cambridge_balun.png')
 plt.show()
 

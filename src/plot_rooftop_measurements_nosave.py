@@ -10,17 +10,17 @@ hybrid_coupler_B=ABM()
 cambridge_balun=ABM()
 no_balun=ADM()
 
-hybrid_coupler_A.read_files('../Rooftop_Antenna_Measurements_August_10th/','_hybrid_A_port_A_antenna',
-                            '../hybrid_coupler_A_Sierra/A_','','ANRITSU_CSV',
+hybrid_coupler_A.read_files('../Rooftop_Antenna_Measurements_August_10th/','_hybrid_A_port_A_antenna_',
+                            '../hybrid_coupler_A_Sierra/A_','_','ANRITSU_CSV',
                             '1','3','4',0.05,0.25)
-hybrid_coupler_B.read_files('../Rooftop_Antenna_Measurements_August_10th/','_hybrid_B_port_A_antenna',
-                            '../hybrid_coupler_B/1','','ANRITSU_CSV',
+hybrid_coupler_B.read_files('../Rooftop_Antenna_Measurements_August_10th/','_hybrid_B_port_A_antenna_',
+                            '../hybrid_coupler_B/1','_','ANRITSU_CSV',
                             '1','3','4',0.05,0.25)
-cambridge_balun.read_files('../Rooftop_Antenna_Measurements_August_10th/','_cambridge_balun_N_antenna_0',
-                            '../Cambridge_Balun_Measurements_N/','','ANRITSU_CSV',
+cambridge_balun.read_files('../Rooftop_Antenna_Measurements_August_10th/','_cambridge_balun_N_antenna_0_',
+                            '../Cambridge_Balun_Measurements_N/','_','ANRITSU_CSV',
                             '1','2','3',0.05,0.25)
 
-no_balun.read_files('../Rooftop_Antenna_Measurements_August_10th/','_no_balun_antenna','ANRITSU_CSV',0.05,0.25)
+no_balun.read_files('../Rooftop_Antenna_Measurements_August_10th/','_no_balun_antenna_','ANRITSU_CSV',0.05,0.25)
 
 simulation=GD()
 simulation.read_files('../Rooftop_Antenna_Measurements_August_10th/Simulation/simulation_s11_rooftop','CST_S11',fMin=0.05,fMax=0.25)
@@ -42,35 +42,35 @@ ax0.plot(sim_impedance.imag)
 '''
 
 
-db_s11_A_corr=10.*np.log10(np.abs(hybrid_coupler_A.antenna_gain_corrected_frequency))
+db_s11_A_corr=10.*np.log10(np.abs(hybrid_coupler_A.antenna_gain_frequency))
 db_s11_A=10.*np.log10(np.abs(hybrid_coupler_A.antenna_raw.gainFrequency))
-db_s11_B_corr=10.*np.log10(np.abs(hybrid_coupler_B.antenna_gain_corrected_frequency))
+db_s11_B_corr=10.*np.log10(np.abs(hybrid_coupler_B.antenna_gain_frequency))
 db_s11_B=10.*np.log10(np.abs(hybrid_coupler_B.antenna_raw.gainFrequency))
-db_s11_cam_corr=10.*np.log10(np.abs(cambridge_balun.antenna_gain_corrected_frequency))
+db_s11_cam_corr=10.*np.log10(np.abs(cambridge_balun.antenna_gain_frequency))
 db_s11_cam=10.*np.log10(np.abs(cambridge_balun.antenna_raw.gainFrequency))
 db_s11_no_balun=10.*np.log10(np.abs(no_balun.antenna_gain_frequency))
 db_s11_sim=10.*np.log10(np.abs(simulation.gainFrequency))
 
 
 
-pha_s11_A_corr=np.angle(hybrid_coupler_A.antenna_gain_corrected_frequency)
+pha_s11_A_corr=np.angle(hybrid_coupler_A.antenna_gain_frequency)
 pha_s11_A=np.angle(hybrid_coupler_A.antenna_raw.gainFrequency)
-pha_s11_B_corr=np.angle(hybrid_coupler_B.antenna_gain_corrected_frequency)
+pha_s11_B_corr=np.angle(hybrid_coupler_B.antenna_gain_frequency)
 pha_s11_B=np.angle(hybrid_coupler_B.antenna_raw.gainFrequency)
-pha_s11_cam_corr=np.angle(cambridge_balun.antenna_gain_corrected_frequency)
+pha_s11_cam_corr=np.angle(cambridge_balun.antenna_gain_frequency)
 pha_s11_cam=np.angle(cambridge_balun.antenna_raw.gainFrequency)
 pha_s11_no_balun=np.angle(no_balun.antenna_gain_frequency)
 pha_s11_sim=np.angle(simulation.gainFrequency)
 
 fig1=plt.figure()
 fig2=plt.figure()
-fig3=plt.figure()
-fig4=plt.figure()
+#fig3=plt.figure()
+#fig4=plt.figure()
 
 ax1=fig1.add_axes([.1,.1,.8,.8])
 ax2=fig2.add_axes([.1,.1,.8,.8])
-ax3=fig3.add_axes([.1,.1,.8,.8])
-ax4=fig4.add_axes([.1,.1,.8,.8])
+#ax3=fig3.add_axes([.1,.1,.8,.8])
+#ax4=fig4.add_axes([.1,.1,.8,.8])
 
 ax1.plot(hybrid_coupler_A.fAxis,db_s11_A,color='k',ls='--',alpha=.5)
 ax1.plot(hybrid_coupler_A.fAxis,db_s11_A_corr,color='k',label='Balun A Corrected')
@@ -103,16 +103,16 @@ ax2.set_ylabel('Arg($S_{11}$) (rad)')
 ax2.legend(loc='best')
 
 
-ax3.plot(hybrid_coupler_A.fAxis,hybrid_coupler_A.gain_corrected_frequency.real,color='k')
-ax3.plot(hybrid_coupler_A.fAxis,hybrid_coupler_A.gain_corrected_frequency.imag,color='k',ls='--')
-ax3.plot(hybrid_coupler_B.fAxis,hybrid_coupler_B.gain_corrected_frequency.real,color='grey')
-ax3.plot(hybrid_coupler_B.fAxis,hybrid_coupler_B.gain_corrected_frequency.imag,color='grey',ls='--')
-ax3.plot(cambridge_balun.fAxis,cambridge_balun.gain_corrected_frequency.real,color='r')
-ax3.plot(cambridge_balun.fAxis,cambridge_balun.gain_corrected_frequency.imag,color='r',ls='--')
+#ax3.plot(hybrid_coupler_A.fAxis,hybrid_coupler_A.gain_antenna_frequency.real,color='k')
+#ax3.plot(hybrid_coupler_A.fAxis,hybrid_coupler_A.gain_antenna_frequency.imag,color='k',ls='--')
+#ax3.plot(hybrid_coupler_B.fAxis,hybrid_coupler_B.gain_antenna_frequency.real,color='grey')
+#ax3.plot(hybrid_coupler_B.fAxis,hybrid_coupler_B.gain_antenna_frequency.imag,color='grey',ls='--')
+#ax3.plot(cambridge_balun.fAxis,cambridge_balun.gain_antenna_frequency.real,color='r')
+#ax3.plot(cambridge_balun.fAxis,cambridge_balun.gain_antenna_frequency.imag,color='r',ls='--')
 
 
-fig1.savefig('Sinuous_s11_amp_comarision_August_10th_2017.pdf')
-fig2.savefig('Sinuous_s11_pha_comarision_August_10th_2017.pdf')
+#fig1.savefig('Sinuous_s11_amp_comarision_August_10th_2017.pdf')
+#fig2.savefig('Sinuous_s11_pha_comarision_August_10th_2017.pdf')
 
 
 plt.show()

@@ -79,7 +79,7 @@ ax1.plot(hybrid_coupler_B.fAxis,db_s11_B_corr,color='grey',label='Balun B Correc
 ax1.plot(cambridge_balun.fAxis,db_s11_cam,color='red',ls='--',alpha=.5)
 ax1.plot(cambridge_balun.fAxis,db_s11_cam_corr,color='red',label='Balun C Corrected')
 ax1.plot(no_balun.fAxis,db_s11_no_balun,color='orange',label='No Balun')
-ax1.plot(simulation.fAxis,db_s11_sim,color='k',lw=5,label='Simulation')
+#ax1.plot(simulation.fAxis,db_s11_sim,color='k',lw=5,label='Simulation')
 ax1.grid()
 fig1.set_size_inches(10,6)
 ax1.set_xlabel('frequency (GHz)')
@@ -95,7 +95,7 @@ ax2.plot(hybrid_coupler_B.fAxis,pha_s11_B_corr,color='grey',label='Balun B Corre
 ax2.plot(cambridge_balun.fAxis,pha_s11_cam,color='red',ls='--',alpha=.5)
 ax2.plot(cambridge_balun.fAxis,pha_s11_cam_corr,color='red',label='Balun C Corrected')
 ax2.plot(no_balun.fAxis,pha_s11_no_balun,color='orange',label='No Balun')
-ax2.plot(simulation.fAxis,pha_s11_sim,color='k',lw=5,label='Simulation')
+#ax2.plot(simulation.fAxis,pha_s11_sim,color='k',lw=5,label='Simulation')
 ax2.grid()
 fig2.set_size_inches(10,6)
 ax2.set_xlabel('frequency (GHz)')
@@ -111,8 +111,8 @@ ax3.plot(cambridge_balun.fAxis,cambridge_balun.gain_corrected_frequency.real,col
 ax3.plot(cambridge_balun.fAxis,cambridge_balun.gain_corrected_frequency.imag,color='r',ls='--')
 
 
-fig1.savefig('Sinuous_s11_amp_comarision_August_10th_2017.pdf')
-fig2.savefig('Sinuous_s11_pha_comarision_August_10th_2017.pdf')
+fig1.savefig('Sinuous_s11_amp_comarision_August_10th_2017_vincent_presentation.pdf')
+fig2.savefig('Sinuous_s11_pha_comarision_August_10th_2017_vincent_presentation.pdf')
 
 
 plt.show()
