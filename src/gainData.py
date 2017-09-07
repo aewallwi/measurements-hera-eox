@@ -365,7 +365,6 @@ class GainData():
             fMin=self.fAxis.min()            
         if(fMax is None):
             fMax=self.fAxis.max()
-
         if(extrapolateBand):
             if DEBUG:
                 print(self.fAxis.min())
@@ -390,7 +389,6 @@ class GainData():
                 self.gainFrequency=np.hstack([self.gainFrequency,pReal[0]*fHigh+pReal[1]+1j*(pImag[0]*fHigh+pImag[1])])
 
                     
-            
         selection=np.logical_and(self.fAxis>=fMin,self.fAxis<=fMax)
         nf=len(np.where(selection)[0])
         if np.mod(nf,2)==1:
