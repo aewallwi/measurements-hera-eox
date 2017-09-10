@@ -29,7 +29,6 @@ configfile=args.input
 fmin=args.fmin
 fmax=args.fmax
 
-print configfile
 
 
 prefixes=[]
@@ -48,7 +47,6 @@ config_lines=open(configfile).readlines()
 for line in config_lines:
     if '#' not in line:
         line_items=line.split(',')
-        print line_items
         prefixes.append(line_items[0])
         postfixes.append(line_items[1])
         filetypes.append(line_items[2])
@@ -76,10 +74,7 @@ for (prefix,postfix,
                               filetypes,meastypes,
                               labels,colors,linewidths,portmaps,
                               prefixesb,postfixesb):
-    print(prefix,postfix,
-          filetype,meastype,
-          label,color,lw,portmap,
-          prefixb,postfixb) 
+    assert meastype in ['differential','balun','simulation','baluncal']
     if meastype=='simulation' or meastype=='baluncal':
         simulation=GD()
         simulation.read_files(prefix+postfix,filetype,fMin=fmin,fMax=fmax)
@@ -97,11 +92,10 @@ for (prefix,postfix,
         freqs=balunmeas.fAxis
     elif meastype=='differential':
         no_balun=ADM()
-        no_balun.read_files(prefix,postix,filetype,fmin,fmax)
+        no_balun.read_files(prefix,postfix,filetype,fmin,fmax)
         db_s11=10.*np.log10(np.abs(no_balun.antenna_gain_frequency))
         pha_s11=np.angle(no_balun.antenna_gain_frequency)
         freqs=no_balun.fAxis
-
     ax1.plot(freqs,db_s11,color=color,lw=lw,label=label)
     ax2.plot(freqs,pha_s11,color=color,lw=lw,label=label)
 
