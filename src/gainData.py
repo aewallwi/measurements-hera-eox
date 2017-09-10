@@ -233,7 +233,10 @@ def readVNAHP(fileName,comment=''):
     dataLines=dataFile.readlines()
     FLOW=1e-9*float(dataLines[6].split()[1]);FHIGH=1e-9*float(dataLines[6].split()[2]);
     NDATA=int(dataLines[6].split()[3])
-    data=np.loadtxt(fileName,skiprows=9,delimiter=',')
+    if 'END' in dataLines[-1]:
+        data=np.genfromtxt(fileName,skip_header=9,skip_footer=1,delimiter=',')
+    else:
+        data=np.genfromtxt(fileName,skip_header=9,skip_footer=0,delimiter=',')
     device=dataLines[1][:-2]
     dtype=dataLines[4].split()[1]
     meta=MetaData()
@@ -616,10 +619,7 @@ class AntennaBalunMeasurement():
         self.antenna_gain_frequency=measdiff_f/\
                                      (self.balun.get_ds('s1d')*self.balun.get_ds('sd1')+\
                                       self.balun.get_ds('sdd')*measdiff_f)
-        self.antenna_gain_delay=measdiff_t/\
-                                 (self.balun.get_ds('s1d',domain='delay')\
-                                  *self.balun.get_ds('sd1',domain='delay')+\
-                                  self.balun.get_ds('sdd',domain='delay')*measdiff_t)
+        self.antenna_gain_delay=fft.fftshift(fft.ifft(fft.fftshift(self.antenna_gain_frequency)))
         
     
 class AntennaDiffMeasurement():
