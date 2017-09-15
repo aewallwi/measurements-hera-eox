@@ -43,6 +43,7 @@ filetypes=[]
 linewidths=[]
 meastypes=[]
 portmaps=[]
+linestyles=[]
 
 config_lines=open(configfile).readlines()
 for line in config_lines:
@@ -58,6 +59,10 @@ for line in config_lines:
         prefixesb.append(line_items[7])
         postfixesb.append(line_items[8])
         portmaps.append(line_items[9])
+        if line_items[10]=='' or line_items[10]=='\n':
+            linestyles.append('-')
+        else:
+            linestyles.append(line_items[10])
 
 
 
@@ -70,10 +75,10 @@ ax2=fig2.add_axes([.1,.1,.8,.8])
 for (prefix,postfix,
      filetype,meastype,
      label,color,lw,portmap,
-     prefixb,postfixb) in zip(prefixes,postfixes,
+     prefixb,postfixb,ls) in zip(prefixes,postfixes,
                               filetypes,meastypes,
                               labels,colors,linewidths,portmaps,
-                              prefixesb,postfixesb):
+                                 prefixesb,postfixesb,linestyles):
     assert meastype in ['differential','balun','simulation','baluncal']
     if meastype=='simulation' or meastype=='baluncal':
         simulation=GD()
@@ -89,7 +94,7 @@ for (prefix,postfix,
             
     elif meastype=='balun':
         balunmeas=ABM()
-        balunmeas.read_files(prefix,postfix,prefixb,postfixb,filetype,portmap[0],portmap[1],portmap[2])
+        balunmeas.read_files(prefix,postfix,prefixb,postfixb,filetype,portmap[0],portmap[1],portmap[2],fMin=fmin,fMax=fmax)
         if domain=='freq':
             db_s11=10.*np.log10(np.abs(balunmeas.antenna_gain_frequency))
             db_s11_ucorr=10.*np.log10(np.abs(balunmeas.antenna_raw.gainFrequency))
@@ -113,8 +118,8 @@ for (prefix,postfix,
         elif domain=='delay':
             db_s11=10.*np.log10(np.abs(no_balun.antenna_gain_delay))
             pha_s11=np.angle(no_balun.antenna_gain_delay)
-    ax1.plot(x,db_s11,color=color,lw=lw,label=label)
-    ax2.plot(x,pha_s11,color=color,lw=lw,label=label)
+    ax1.plot(x,db_s11,linestyle=ls,color=color,lw=int(lw),label=label)
+    ax2.plot(x,pha_s11,linestyle=ls,color=color,lw=int(lw),label=label)
 
 ax1.grid()
 fig1.set_size_inches(10,6)
@@ -128,9 +133,9 @@ elif domain=='delay':
     ax1.set_ylabel('$|\\widetilde{S}_{11}|$(dB)')
     ax2.set_xlabel('Delay (ns)')
     ax2.set_ylabel('Arg($\\widetilde{S}_{11}$) (rad)')
-    ax1.set_xlim(-400,600)
+    ax1.set_xlim(-100,500)
     ax1.set_ylim(-50,0)
-    ax2.set_xlim(-400,600)
+    ax2.set_xlim(-100,500)
     
 ax2.legend(loc='best')
 ax1.legend(loc='best')
