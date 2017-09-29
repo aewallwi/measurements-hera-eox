@@ -23,6 +23,10 @@ parser.add_argument('--fmin','-l',type=float,
                     help=('minimum frequency'),default=0.05)
 parser.add_argument('--fmax','-u',type=float,
                     help=('maximum frequency'),default=0.25)
+parser.add_argument('--minamp','-m',type=float,default=-60,
+                    help='maximum amplitude to plot')
+parser.add_argument('--maxamp','-x',type=float,default=0,
+                    help='minimum amplitude to plot')
 
 args=parser.parse_args()
 configfile=args.input
