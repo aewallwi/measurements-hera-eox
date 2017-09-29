@@ -251,6 +251,60 @@ def fftRatio(convolved,kernel):
     kernel_pad=np.pad(kernel,(nf/2,nf/2),mode='constant')
     return fft.fftshift(fft.fft(convolved_pad)/fft.fft(kernel_pad))
     
+#Read CST time trace file
+def readCSTTimeTrace(fileName,comment=''):
+    dataFile=open(fileName)
+    dataLines=dataFile.readlines()
+    header=dataLines[:2]
+    if('ns' in header[0]):
+        tFactor=1.
+    if('ms' in header[0]):
+        tFactor=1e6
+    if('micro' in header[0]):
+        tFactor=1e3
+    if('sec' in header[0]):
+        tFactor=1e9
+    inputTrace=[]
+    outputTrace1=[]
+    outputTrace2=[]
+    lNum=0
+    while lNum <len(dataLines):
+        if('o1' in dataLines[lNum]):
+            thisTrace=outputTrace1
+            lNum+=2
+        elif('o2' in dataLines[lNum]):
+            thisTrace=outputTrace2
+            lNum+=2
+        elif('i1' in dataLines[lNum]):
+            thisTrace=inputTrace
+            lNum+=2
+            dtype='Terminal Excitation'
+        elif('Plane wave' in dataLines[lNum]):
+            thisTrace=inputTrace
+            lNum+=2
+            dtype='PlaneWave Excitation'
+        else:
+            entry=dataLines[lNum].split()
+            if(len(entry)==2):
+                thisTrace.append([float(entry[0]),float(entry[1])])
+            lNum+=1
+    inputTrace=np.array(inputTrace)
+    outputTrace1=np.array(outputTrace1)
+    outputTrace2=np.array(outputTrace2)
+    print('len(inputtrace=%d'%(len(inputTrace)))
+    print('len(outputtrace=%d'%(len(outputTrace1)))
+    inputTrace[:,0]*=tFactor
+    outputTrace1[:,0]*=tFactor
+    if(len(outputTrace2)>0):
+        outputTrace2[:,0]*=tFactor
+    if np.mod(len(inputTrace),2)==1:
+        outputTrace1=outputTrace1[:-1,:]
+        print len(outputTrace2)
+        if len(outputTrace2)>0:
+            outputTrace2=outputTrace2[:-1,:]
+        inputTrace=inputTrace[:-1,:]
+    meta=MetaData(device='CST',dtype=['TIME',dtype],datarange=[inputTrace[:,0].min(),inputTrace[:,0].max(),len(inputTrace[:,0])],comment=comment)
+    return [inputTrace,outputTrace1,outputTrace2],meta
 
 #Read CST time trace file
 def readCSTTimeTrace(fileName,comment=''):
@@ -298,7 +352,8 @@ def readCSTTimeTrace(fileName,comment=''):
         outputTrace2[:,0]*=tFactor
     if np.mod(len(inputTrace),2)==1:
         outputTrace1=outputTrace1[:-1,:]
-        outputTrace2=outputTrace2[:-1,:]
+        if(len(outputTrace2)>0):
+            outputTrace2=outputTrace2[:-1,:]
         inputTrace=inputTrace[:-1,:]
     meta=MetaData()
     meta.set_info(device='CST',dtype=['TIME',dtype],datarange=[inputTrace[:,0].min(),inputTrace[:,0].max(),len(inputTrace[:,0])],comment=comment)
