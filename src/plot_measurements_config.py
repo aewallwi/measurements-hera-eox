@@ -27,13 +27,22 @@ parser.add_argument('--minamp','-m',type=float,default=-60,
                     help='maximum amplitude to plot')
 parser.add_argument('--maxamp','-x',type=float,default=0,
                     help='minimum amplitude to plot')
+#parser.add_argument('--zi','-z',type=float,default=None,help='ofiginal input impedance')
+#parser.add_argument('--zo','-Z',type=float,default=None,help='new input impedance')
 
 args=parser.parse_args()
 configfile=args.input
 fmin=args.fmin
 fmax=args.fmax
 domain=args.domain
-
+ymin=args.minamp
+ymax=args.maxamp
+#zo=args.zo
+#zi=args.zi
+#if zo is None or zi is None:
+#    changez=False
+#else:
+#    chanzez=True
 
 
 prefixes=[]
@@ -48,6 +57,9 @@ linewidths=[]
 meastypes=[]
 portmaps=[]
 linestyles=[]
+changezs=[]
+zis=[]
+zfs=[]
 
 config_lines=open(configfile).readlines()
 for line in config_lines:
@@ -67,8 +79,17 @@ for line in config_lines:
             linestyles.append('-')
         else:
             linestyles.append(line_items[10])
-
-
+        if len(line_items)==13:
+            if line_items[11]=='True':
+                changezs.append(True)
+            else:
+                changezs.append(False)
+            zis.append(float(line_items[12]))
+            zfs.append(floag(line_items[13]))
+        else:
+            changezs.append(False)
+            zis.append(0.)
+            zfs.append(0.)
 
 
 fig1=plt.figure()
@@ -79,14 +100,14 @@ ax2=fig2.add_axes([.1,.1,.8,.8])
 for (prefix,postfix,
      filetype,meastype,
      label,color,lw,portmap,
-     prefixb,postfixb,ls) in zip(prefixes,postfixes,
-                              filetypes,meastypes,
-                              labels,colors,linewidths,portmaps,
-                                 prefixesb,postfixesb,linestyles):
+     prefixb,postfixb,ls,changez,zi,zf) in zip(prefixes,postfixes,
+                                               filetypes,meastypes,
+                                               labels,colors,linewidths,portmaps,
+                                               prefixesb,postfixesb,linestyles,changezs,zis,zfs):
     assert meastype in ['differential','balun','simulation','baluncal']
     if meastype=='simulation' or meastype=='baluncal':
         simulation=GD()
-        simulation.read_files(prefix+postfix,filetype,fMin=fmin,fMax=fmax)
+        simulation.read_files(prefix+postfix,filetype,fMin=fmin,fMax=fmax,changeZ=changez,z0=zi,z1=zf)
         if domain=='freq':
             db_s11=10.*np.log10(np.abs(simulation.gainFrequency))
             pha_s11=np.angle(simulation.gainFrequency)
@@ -98,7 +119,7 @@ for (prefix,postfix,
             
     elif meastype=='balun':
         balunmeas=ABM()
-        balunmeas.read_files(prefix,postfix,prefixb,postfixb,filetype,portmap[0],portmap[1],portmap[2],fMin=fmin,fMax=fmax)
+        balunmeas.read_files(prefix,postfix,prefixb,postfixb,filetype,portmap[0],portmap[1],portmap[2],fMin=fmin,fMax=fmax,changeZ=changez,z0=zi,z1=zf)
         if domain=='freq':
             db_s11=10.*np.log10(np.abs(balunmeas.antenna_gain_frequency))
             db_s11_ucorr=10.*np.log10(np.abs(balunmeas.antenna_raw.gainFrequency))
@@ -114,7 +135,7 @@ for (prefix,postfix,
             
     elif meastype=='differential':
         no_balun=ADM()
-        no_balun.read_files(prefix,postfix,filetype,fmin,fmax)
+        no_balun.read_files(prefix,postfix,filetype,fmin,fmax,changeZ=changez,z0=zi,z1=zf)
         if domain=='freq':
             db_s11=10.*np.log10(np.abs(no_balun.antenna_gain_frequency))
             pha_s11=np.angle(no_balun.antenna_gain_frequency)
@@ -140,7 +161,7 @@ elif domain=='delay':
     ax1.set_xlim(-100,500)
     ax1.set_ylim(-50,0)
     ax2.set_xlim(-100,500)
-    
+ax1.set_ylim(ymin,ymax)
 ax2.legend(loc='best')
 ax1.legend(loc='best')
 ax2.grid()

@@ -399,7 +399,7 @@ class GainData():
     def __init__(self):
         self.metaData=MetaData()
         
-    def read_files(self,fileName,fileType,fMin=None,fMax=None,windowFunction=None,comment='',filterNegative=False,extrapolateBand=False):
+    def read_files(self,fileName,fileType,fMin=None,fMax=None,windowFunction=None,comment='',filterNegative=False,extrapolateBand=False,changeZ=False,z0=100,z1=100):
         assert fileType in FILETYPES
         if(windowFunction is None):
             windowFunction = 'blackman-harris'
@@ -476,9 +476,24 @@ class GainData():
             gainDelay[self.tAxis<0.]=0.
             self.gainFrequency=fft.fftshift(fft.fft(fft.fftshift(gainDelay)))
         self.gainDelay=fft.fftshift(fft.ifft(fft.fftshift(self.gainFrequency*wF)))
+        if changeZ:
+            self.change_impedance(z0,z1)
+            
 
-
-
+    def change_impedance(self,z0,z1):
+        '''
+        change the reference impedance.
+        args:
+        z0: original reference impedance
+        z1: new reference impedance
+        '''
+        za=z0*(1-self.gainFrequency)/(1+self.gainFrequency)
+        self.gainFrequency=(za-z1)/(za+z1)
+        wF=signal.blackmanharris(len(self.fAxis))
+        wF/=np.sqrt(np.mean(wF**2.))
+        self.gainDelay=fft.fftshift(fft.ifft(fft.fftshift(self.gainFrequency*wF)))
+        
+        
     def export_CST_freq_s11(self,outfile):
         '''
         export frequency S11 to a .txt file format output by CST
@@ -659,11 +674,12 @@ class AntennaBalunMeasurement():
         self.antenna_raw=GainData()
     def read_files(self,ant_prefix,ant_postfix,
                    balun_prefix,balun_postfix,filetype,
-                   port1_balun,port2_balun,port3_balun,fMin=0.05,fMax=0.25):
+                   port1_balun,port2_balun,port3_balun,fMin=0.05,fMax=0.25,
+                   changeZ=False,z0=100.,z1=100.):
         self.balun.read_files(balun_prefix,balun_postfix,filetype,
                               port1_balun,port2_balun,port3_balun,fMin,fMax)
         self.antenna_raw.read_files(ant_prefix+'s11'+ant_postfix,
-                                    filetype,fMin,fMax)
+                                    filetype,fMin,fMax,)
         self.fAxis=self.antenna_raw.fAxis
         self.tAxis=self.antenna_raw.tAxis
         self.antenna_gain_frequency=np.zeros_like(self.antenna_raw.gainFrequency)
@@ -674,8 +690,10 @@ class AntennaBalunMeasurement():
         self.antenna_gain_frequency=measdiff_f/\
                                      (self.balun.get_ds('s1d')*self.balun.get_ds('sd1')+\
                                       self.balun.get_ds('sdd')*measdiff_f)
+        if changeZ:
+            za=z0*(1-self.antenna_gain_frequency)
+            self.antenna_gain_frequency=(za-z1)/(za+z1)
         self.antenna_gain_delay=fft.fftshift(fft.ifft(fft.fftshift(self.antenna_gain_frequency)))
-        
     
 class AntennaDiffMeasurement():
     '''
@@ -683,11 +701,11 @@ class AntennaDiffMeasurement():
     '''
     def __init__(self):
         self.unbalanced_list=[[GainData() for m in range(2)] for n in range(2)]
-    def read_files(self,ant_prefix,ant_postfix,filetype,fMin=0.05,fMax=0.25):
+    def read_files(self,ant_prefix,ant_postfix,filetype,fMin=0.05,fMax=0.25,changeZ=False,z0=100.,z1=100.):
         for a,astr in enumerate(['1','2']):
             for b,bstr in enumerate(['1','2']):
                 self.unbalanced_list[a][b].read_files(ant_prefix+'s%s%s'%(astr,bstr)+ant_postfix,
-                                            filetype,fMin,fMax)
+                                                      filetype,fMin,fMax,changeZ=changeZ,z0=z0,z1=z1)
         self.fAxis=self.unbalanced_list[0][0].fAxis
         self.tAxis=self.unbalanced_list[0][0].tAxis
         self.antenna_gain_frequency=np.zeros_like(self.unbalanced_list[0][0].gainFrequency)
@@ -696,7 +714,8 @@ class AntennaDiffMeasurement():
         for chan in range(self.nf):
             self.antenna_gain_frequency[chan]=.5*(self.unbalanced_list[0][0].gainFrequency[chan]+self.unbalanced_list[1][1].gainFrequency[chan]\
                                                   -self.unbalanced_list[1][0].gainFrequency[chan]-self.unbalanced_list[0][1].gainFrequency[chan])
-            self.antenna_gain_delay[chan]=.5*(self.unbalanced_list[0][0].gainDelay[chan]+self.unbalanced_list[1][1].gainDelay[chan]\
-                                              -self.unbalanced_list[1][0].gainDelay[chan]-self.unbalanced_list[0][1].gainDelay[chan])
-        
+            self.antenna_gain_delay[chan]=0.5*(self.unbalanced_list[0][0].gainDelay[chan]+self.unbalanced_list[1][1].gainDelay[chan]\
+                                               -self.unbalanced_list[1][0].gainDelay[chan]-self.unbalanced_list[0][1].gainDelay[chan])
+
+
 
