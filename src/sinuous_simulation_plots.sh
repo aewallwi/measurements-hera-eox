@@ -4,3 +4,4 @@
 #!/bin/bash
 source activate hera_antenna
 python plot_measurements_config.py -i compare_sinuous_simulations.conf -d delay --fmin 0.05 --fmax 0.25 --output compare_sinuous_fullband
+python plot_measurements_config.py -i compare_sinuous_simulations.conf -d freq --fmin 0.05 --fmax 0.25 --output compare_sinuous_fullband_freq -m -20 -x 3
