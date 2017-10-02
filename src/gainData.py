@@ -487,7 +487,8 @@ class GainData():
         z0: original reference impedance
         z1: new reference impedance
         '''
-        za=z0*(1-self.gainFrequency)/(1+self.gainFrequency)
+        za=-z0*(1+self.gainFrequency)/(1-self.gainFrequency)
+        za=za.real+1j*za.imag
         self.gainFrequency=(za-z1)/(za+z1)
         wF=signal.blackmanharris(len(self.fAxis))
         wF/=np.sqrt(np.mean(wF**2.))
@@ -691,7 +692,7 @@ class AntennaBalunMeasurement():
                                      (self.balun.get_ds('s1d')*self.balun.get_ds('sd1')+\
                                       self.balun.get_ds('sdd')*measdiff_f)
         if changeZ:
-            za=z0*(1-self.antenna_gain_frequency)
+            za=z0*(1+self.antenna_gain_frequency)/(1-self.antenna_gain_frequency)
             self.antenna_gain_frequency=(za-z1)/(za+z1)
         self.antenna_gain_delay=fft.fftshift(fft.ifft(fft.fftshift(self.antenna_gain_frequency)))
     
