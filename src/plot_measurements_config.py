@@ -27,6 +27,10 @@ parser.add_argument('--minamp','-m',type=float,default=-60,
                     help='maximum amplitude to plot')
 parser.add_argument('--maxamp','-x',type=float,default=0,
                     help='minimum amplitude to plot')
+parser.add_argument('--normalize','-n',type=str,default='False',
+                    help='normalize gains to a maximum amplitude of 1.')
+parser.add_argument('--title','-t',type=str,default=None,
+                    help='Title for your plot.')
 #parser.add_argument('--zi','-z',type=float,default=None,help='ofiginal input impedance')
 #parser.add_argument('--zo','-Z',type=float,default=None,help='new input impedance')
 
@@ -37,6 +41,10 @@ fmax=args.fmax
 domain=args.domain
 ymin=args.minamp
 ymax=args.maxamp
+if args.normalize=='True' or args.normalize=='1':
+    normalized=True
+else:
+    normalized=False
 #zo=args.zo
 #zi=args.zi
 #if zo is None or zi is None:
@@ -65,6 +73,7 @@ config_lines=open(configfile).readlines()
 for line in config_lines:
     if '#' not in line:
         line_items=line.split(',')
+        #print('len=%d'%len(line_items))
         prefixes.append(line_items[0])
         postfixes.append(line_items[1])
         filetypes.append(line_items[2])
@@ -79,13 +88,13 @@ for line in config_lines:
             linestyles.append('-')
         else:
             linestyles.append(line_items[10])
-        if len(line_items)==13:
+        if len(line_items)==14:
             if line_items[11]=='True':
                 changezs.append(True)
             else:
                 changezs.append(False)
             zis.append(float(line_items[12]))
-            zfs.append(floag(line_items[13]))
+            zfs.append(float(line_items[13]))
         else:
             changezs.append(False)
             zis.append(0.)
@@ -143,6 +152,8 @@ for (prefix,postfix,
         elif domain=='delay':
             db_s11=10.*np.log10(np.abs(no_balun.antenna_gain_delay))
             pha_s11=np.angle(no_balun.antenna_gain_delay)
+    if normalized:
+        db_s11-=db_s11.max()
     ax1.plot(x,db_s11,linestyle=ls,color=color,lw=int(lw),label=label)
     ax2.plot(x,pha_s11,linestyle=ls,color=color,lw=int(lw),label=label)
 
@@ -166,7 +177,9 @@ ax2.legend(loc='best')
 ax1.legend(loc='best')
 ax2.grid()
 fig2.set_size_inches(10,6)
-
+if args.title:
+    ax1.set_title(args.title)
+    ax2.set_title(args.title)
 
 if args.output:
     fig2.savefig(args.output+'_pha.png',bbox_inches='tight')
