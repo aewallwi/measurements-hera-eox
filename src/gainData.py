@@ -360,6 +360,14 @@ class GainData():
         self.windowFunction=windowFunction
         if (fileType=='CST_TimeTrace'):
             [inputTrace,outputTrace,_],self.metaData=readCSTTimeTrace(fileName,comment=comment)
+            if np.mod(len(inputTrace),2)==1:
+                inputTrace=np.vstack([inputTrace[0,:],inputTrace])
+                inputTrace[0,0]-=(inputTrace[2,0]-inputTrace[1,0])
+                outputTrace=np.vstack([outputTrace[0,:],outputTrace])
+                outputTrace[0,0]-=(outputTrace[2,0]-outputTrace[1,0])
+            #plt.plot(inputTrace[:,0],inputTrace[:,1])
+            #plt.plot(outputTrace[:,0],outputTrace[:,1])
+            #plt.show()
             self.fAxis=fft.fftshift(fft.fftfreq(len(inputTrace)*2,inputTrace[1,0]-inputTrace[0,0]))
             self.gainFrequency=fftRatio(outputTrace[:,1],inputTrace[:,1])
             
