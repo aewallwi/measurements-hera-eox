@@ -31,6 +31,9 @@ parser.add_argument('--normalize','-n',type=str,default='False',
                     help='normalize gains to a maximum amplitude of 1.')
 parser.add_argument('--title','-t',type=str,default=None,
                     help='Title for your plot.')
+parser.add_argument('--zero','-z',dest='zero',type=str,default='False',
+                    help=('True or False depending on if you'
+                          'want the peak of the delay response to be translated to zero ns.'))
 #parser.add_argument('--zi','-z',type=float,default=None,help='ofiginal input impedance')
 #parser.add_argument('--zo','-Z',type=float,default=None,help='new input impedance')
 
@@ -45,6 +48,10 @@ if args.normalize=='True' or args.normalize=='1':
     normalized=True
 else:
     normalized=False
+if args.zero=='True' or args.zero=='1':
+    zero=True
+else:
+    zero=False
 #zo=args.zo
 #zi=args.zi
 #if zo is None or zi is None:
@@ -154,6 +161,8 @@ for (prefix,postfix,
             pha_s11=np.angle(no_balun.antenna_gain_delay)
     if normalized:
         db_s11-=db_s11.max()
+    if zero:
+        x=x-x[np.argmax(db_s11)]
     ax1.plot(x,db_s11,linestyle=ls,color=color,lw=int(lw),label=label)
     ax2.plot(x,pha_s11,linestyle=ls,color=color,lw=int(lw),label=label)
 
