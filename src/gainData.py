@@ -9,7 +9,7 @@ import matplotlib.pyplot as plt
 import re as re
 import scipy.interpolate as interp
 import os
-DEBUG=False
+DEBUG=True
 '''
 A few transformation matrices for differential measurements
 '''
@@ -312,6 +312,9 @@ def readCSTTimeTrace(fileName,comment=''):
     meta.set_info(device='CST',dtype=['TIME',dtype],datarange=[inputTrace[:,0].min(),inputTrace[:,0].max(),len(inputTrace[:,0])],comment=comment)
     return [inputTrace,outputTrace1,outputTrace2],meta
 
+def readNicholasTimeTrace(filename):
+    x=np.loadtxt(filename,skiprows=1)
+    return np.vstack([x[:,0],x[:,1]]).T,np.vstack([x[:,0],x[:,2]]).T
     
 def readCSTS11(fileName,comment='',degrees=True):
     dB=False
@@ -348,7 +351,7 @@ def readCSTS11(fileName,comment='',degrees=True):
     return fFactor*fAxis,data,meta
     
 
-FILETYPES=['CST_TimeTrace','CST_S11','VNAHP_S11','S11_CSV','S11_S1P','ANRITSU_CSV']
+FILETYPES=['CST_TimeTrace','CST_S11','VNAHP_S11','S11_CSV','S11_S1P','ANRITSU_CSV','Nicolas']
 class GainData():
     def __init__(self):
         self.metaData=MetaData()
@@ -358,8 +361,11 @@ class GainData():
         if(windowFunction is None):
             windowFunction = 'blackman-harris'
         self.windowFunction=windowFunction
-        if (fileType=='CST_TimeTrace'):
-            [inputTrace,outputTrace,_],self.metaData=readCSTTimeTrace(fileName,comment=comment)
+        if (fileType=='CST_TimeTrace'or fileType=='Nicolas'):
+            if fileType=='CST_TimeTrace':
+                [inputTrace,outputTrace,_],self.metaData=readCSTTimeTrace(fileName,comment=comment)
+            elif fileType=='Nicolas':
+                [inputTrace,outputTrace]=readNicholasTimeTrace(fileName)
             if np.mod(len(inputTrace),2)==1:
                 inputTrace=np.vstack([inputTrace[0,:],inputTrace])
                 inputTrace[0,0]-=(inputTrace[2,0]-inputTrace[1,0])
@@ -370,6 +376,7 @@ class GainData():
             #plt.show()
             self.fAxis=fft.fftshift(fft.fftfreq(len(inputTrace)*2,inputTrace[1,0]-inputTrace[0,0]))
             self.gainFrequency=fftRatio(outputTrace[:,1],inputTrace[:,1])
+            
             
         elif(fileType=='CST_S11'):
             self.fAxis,self.gainFrequency,self.metaData=readCSTS11(fileName,comment=comment)
