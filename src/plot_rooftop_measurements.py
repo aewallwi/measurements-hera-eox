@@ -11,10 +11,10 @@ cambridge_balun=ABM()
 no_balun=ADM()
 
 hybrid_coupler_A.read_files('../Rooftop_Antenna_Measurements_August_10th/','_hybrid_A_port_A_antenna',
-                            '../hybrid_coupler_A_Sierra/A_','','ANRITSU_CSV',
+                            '../hybrid_coupler_A_Sierra/A_','_','ANRITSU_CSV',
                             '1','3','4',0.05,0.25)
 hybrid_coupler_B.read_files('../Rooftop_Antenna_Measurements_August_10th/','_hybrid_B_port_A_antenna',
-                            '../hybrid_coupler_B/1','','ANRITSU_CSV',
+                            '../hybrid_coupler_B/1','_','ANRITSU_CSV',
                             '1','3','4',0.05,0.25)
 cambridge_balun.read_files('../Rooftop_Antenna_Measurements_August_10th/','_cambridge_balun_N_antenna_0',
                             '../Cambridge_Balun_Measurements_N/','','ANRITSU_CSV',
@@ -23,7 +23,7 @@ cambridge_balun.read_files('../Rooftop_Antenna_Measurements_August_10th/','_camb
 no_balun.read_files('../Rooftop_Antenna_Measurements_August_10th/','_no_balun_antenna','ANRITSU_CSV',0.05,0.25)
 
 simulation=GD()
-simulation.read_files('../Rooftop_Antenna_Measurements_August_10th/Simulation/simulation_s11_rooftop','CST_S11',fMin=0.05,fMax=0.25)
+simulation.read_files('../Rooftop_Antenna_Measurements_August_10th/Simulation/S11_0.80-30-175_no-imp-100-band-no-skirt-1.2-0.3-backplane-50-0.99-1','CST_S11',fMin=0.05,fMax=0.25)
 simulation.gainFrequency=simulation.gainFrequency
 
 #load Jianshu's data
