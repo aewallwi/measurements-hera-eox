@@ -43,13 +43,16 @@ parser.add_argument('--impedance','-r',dest='impedance',type=str,default=None,
                     help='If set to "True", plot the antenna impedance instead of S11')
 parser.add_argument('--kernel','-k',dest='kernel',type=str,default='False',
                     help='If set to "True", plot the delay-kernel instead of S11')
-parser.add_argument('--tickfontsize',dest='tickfontsize',type=int,default=12,
+parser.add_argument('--tickfontsize',dest='tickfontsize',type=int,default=14,
                     help='Specify font-size for tick labels')
-parser.add_argument('--labelfontsize',dest='labelfontsize',type=int,default=12,
+parser.add_argument('--labelfontsize',dest='labelfontsize',type=int,default=16,
                     help='Specify font-size for labels')
-parser.add_argument('--legendfontsize',dest='legendfontsize',type=int,default=12,
+parser.add_argument('--legendfontsize',dest='legendfontsize',type=int,default=14,
                     help='Specify font-size for legend')
-
+parser.add_argument('--titlefontsize',dest='titlefontsize',type=int,default=18,
+                    help='Specify font-size for title')
+parser.add_argument('--legendcol',dest='legendcol',type=int,default=1,
+                    help='Specify number of legend columns')
 #parser.add_argument('--zi','-z',type=float,default=None,help='ofiginal input impedance')
 #parser.add_argument('--zo','-Z',type=float,default=None,help='new input impedance')
 
@@ -61,6 +64,10 @@ domain=args.domain
 ymin=args.minamp
 ymax=args.maxamp
 labelfontsize=args.labelfontsize
+legendfontsize=args.legendfontsize
+titlefontsize=args.titlefontsize
+legendcol=args.legendcol
+tickfontsize=args.tickfontsize
 if args.normalize=='True' or args.normalize=='1':
     normalized=True
 else:
@@ -158,7 +165,7 @@ for (prefix,postfix,
             pha_s11=np.angle(simulation.gainFrequency)
             x=simulation.fAxis
         elif domain=='delay':#only allow delay kernel for simulations for now. 
-            if kernel adn meastype=='simulation':
+            if kernel and meastype=='simulation':
                 y=simulation.delay_kernel()
             else:
                 y=simulation.gainDelay
@@ -222,14 +229,15 @@ elif domain=='delay':
     ax1.set_ylim(-50,0)
     ax2.set_xlim(-100,500)
 ax1.set_ylim(ymin,ymax)
-ax2.legend(loc='lower center',ncol=2)
-ax1.legend(loc='lower center',ncol=2)
+ax2.legend(loc='best',ncol=legendcol,fontsize=legendfontsize)
+ax1.legend(loc='best',ncol=legendcol,fontsize=legendfontsize)
 ax2.grid()
 fig2.set_size_inches(10,6)
 if args.title:
-    ax1.set_title(args.title)
-    ax2.set_title(args.title)
-
+    ax1.set_title(args.title,fontsize=titlefontsize)
+    ax2.set_title(args.title,fontsize=titlefontsize)
+ax1.tick_params(labelsize=tickfontsize)
+ax2.tick_params(labelsize=tickfontsize)
 if args.output:
     fig2.savefig(args.output+'_pha.png',bbox_inches='tight')
     fig1.savefig(args.output+'_amp.png',bbox_inches='tight')
