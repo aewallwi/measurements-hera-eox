@@ -2,9 +2,14 @@ import numpy as np
 from gainData import AntennaBalunMeasurement as ABM
 from gainData import AntennaDiffMeasurement as ADM
 from gainData import GainData as GD
-import matplotlib.pyplot as plt
 import sys
 import argparse
+import matplotlib
+matplotlib.rcParams['mathtext.fontset'] = 'stix'
+matplotlib.rcParams['font.family'] = 'STIXGeneral'
+matplotlib.pyplot.title(r'ABC123 vs $\mathrm{ABC123}^{123}$')
+import matplotlib.pyplot as plt
+plt.close()
 
 
 parser=argparse.ArgumentParser(description='Plot S11 amplitude and phase for simulations and/or measurements using various techniques')
@@ -34,6 +39,17 @@ parser.add_argument('--title','-t',type=str,default=None,
 parser.add_argument('--zero','-z',dest='zero',type=str,default='False',
                     help=('True or False depending on if you'
                           'want the peak of the delay response to be translated to zero ns.'))
+parser.add_argument('--impedance','-r',dest='impedance',type=str,default=None,
+                    help='If set to "True", plot the antenna impedance instead of S11')
+parser.add_argument('--kernel','-k',dest='kernel',type=str,default='False',
+                    help='If set to "True", plot the delay-kernel instead of S11')
+parser.add_argument('--tickfontsize',dest='tickfontsize',type=int,default=12,
+                    help='Specify font-size for tick labels')
+parser.add_argument('--labelfontsize',dest='labelfontsize',type=int,default=12,
+                    help='Specify font-size for labels')
+parser.add_argument('--legendfontsize',dest='legendfontsize',type=int,default=12,
+                    help='Specify font-size for legend')
+
 #parser.add_argument('--zi','-z',type=float,default=None,help='ofiginal input impedance')
 #parser.add_argument('--zo','-Z',type=float,default=None,help='new input impedance')
 
@@ -44,6 +60,7 @@ fmax=args.fmax
 domain=args.domain
 ymin=args.minamp
 ymax=args.maxamp
+labelfontsize=args.labelfontsize
 if args.normalize=='True' or args.normalize=='1':
     normalized=True
 else:
@@ -52,6 +69,10 @@ if args.zero=='True' or args.zero=='1':
     zero=True
 else:
     zero=False
+if args.kernel=='True' or args.kernel=='1':
+    kernel=True
+else:
+    kernel=False
 #zo=args.zo
 #zi=args.zi
 #if zo is None or zi is None:
@@ -95,13 +116,20 @@ for line in config_lines:
             linestyles.append('-')
         else:
             linestyles.append(line_items[10])
-        if len(line_items)==14:
-            if line_items[11]=='True':
+        if len(line_items)>=14:
+            print(line_items[11])
+            if 'True' in line_items[11]:
                 changezs.append(True)
             else:
                 changezs.append(False)
-            zis.append(float(line_items[12]))
-            zfs.append(float(line_items[13]))
+            if 'txt' in line_items[12] or 's2p' in line_items[12] or 'z1p'in line_items[12]:
+                zis.append(line_items[12])
+            else:
+                zis.append(float(line_items[12]))
+            if 'txt' in line_items[13] or 's2p' in line_items[13] or 'z1p' in line_items[13]:
+                zfs.append(line_items[13])
+            else:
+                zfs.append(float(line_items[13]))
         else:
             changezs.append(False)
             zis.append(0.)
@@ -112,7 +140,7 @@ fig1=plt.figure()
 fig2=plt.figure()
 ax1=fig1.add_axes([.1,.1,.8,.8])
 ax2=fig2.add_axes([.1,.1,.8,.8])
-
+print('changzs=%s'%str(changezs))
 for (prefix,postfix,
      filetype,meastype,
      label,color,lw,portmap,
@@ -120,6 +148,7 @@ for (prefix,postfix,
                                                filetypes,meastypes,
                                                labels,colors,linewidths,portmaps,
                                                prefixesb,postfixesb,linestyles,changezs,zis,zfs):
+    print meastype
     assert meastype in ['differential','balun','simulation','baluncal']
     if meastype=='simulation' or meastype=='baluncal':
         simulation=GD()
@@ -128,9 +157,14 @@ for (prefix,postfix,
             db_s11=10.*np.log10(np.abs(simulation.gainFrequency))
             pha_s11=np.angle(simulation.gainFrequency)
             x=simulation.fAxis
-        elif domain=='delay':
-            db_s11=10.*np.log10(np.abs(simulation.gainDelay))
-            pha_s11=np.angle(simulation.gainDelay)
+        elif domain=='delay':#only allow delay kernel for simulations for now. 
+            if kernel adn meastype=='simulation':
+                y=simulation.delay_kernel()
+            else:
+                y=simulation.gainDelay
+                
+            db_s11=10.*np.log10(np.abs(y))
+            pha_s11=np.angle(y)
             x=simulation.tAxis
             
     elif meastype=='balun':
@@ -166,24 +200,30 @@ for (prefix,postfix,
     ax1.plot(x,db_s11,linestyle=ls,color=color,lw=int(lw),label=label)
     ax2.plot(x,pha_s11,linestyle=ls,color=color,lw=int(lw),label=label)
 
+
 ax1.grid()
 fig1.set_size_inches(10,6)
 if domain=='freq':
-    ax1.set_xlabel('frequency (GHz)')
-    ax1.set_ylabel('|S$_{11}$| (dB)')
-    ax2.set_xlabel('frequency (GHz)')
-    ax2.set_ylabel('Arg($S_{11}$) (rad)')
+    ax1.set_xlabel('frequency (GHz)',fontsize=labelfontsize)
+    ax1.set_ylabel('|S$_{11}$| (dB)',fontsize=labelfontsize)
+    ax2.set_xlabel('frequency (GHz)',fontsize=labelfontsize)
+    ax2.set_ylabel('Arg($S_{11}$) (rad)',fontsize=labelfontsize)
 elif domain=='delay':
-    ax1.set_xlabel('Delay (ns)')
-    ax1.set_ylabel('$|\\widetilde{S}_{11}|$(dB)')
+    ax1.set_xlabel('Delay (ns)',fontsize=labelfontsize)
+    if kernel:
+        ax1.set_ylabel('Delay Kernel (dB)',fontsize=labelfontsize)
+    elif planewave:
+        ax1.set_ylabel('$|\widetilde{g}|$ (dB)',fontsize=labelfontsize)
+    else:
+        ax1.set_ylabel('$|\\widetilde{S}_{11}|$(dB)',fontsize=labelfontsize)
     ax2.set_xlabel('Delay (ns)')
-    ax2.set_ylabel('Arg($\\widetilde{S}_{11}$) (rad)')
+    ax2.set_ylabel('Arg($\\widetilde{S}_{11}$) (rad)',fontsize=labelfontsize)
     ax1.set_xlim(-100,500)
     ax1.set_ylim(-50,0)
     ax2.set_xlim(-100,500)
 ax1.set_ylim(ymin,ymax)
-ax2.legend(loc='best')
-ax1.legend(loc='best')
+ax2.legend(loc='lower center',ncol=2)
+ax1.legend(loc='lower center',ncol=2)
 ax2.grid()
 fig2.set_size_inches(10,6)
 if args.title:

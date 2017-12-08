@@ -9,7 +9,7 @@ import matplotlib.pyplot as plt
 import re as re
 import scipy.interpolate as interp
 import os
-DEBUG=True
+DEBUG=False
 '''
 A few transformation matrices for differential measurements
 '''
@@ -33,8 +33,23 @@ def ftUK(times,data):
     -so in these plots, to make it simple I did not apply a specific windowing function, it is just a "square" from 0 to 250 MHz, but this can be modified
     '''
     return None
+#************************************************************
+#read in impedance and interpolate
+#************************************************************
 
-
+def read_z_interp(fAxis,zfile):
+    fdata,zdata,_=readS1P(zfile)
+    #interpolate frequency axis
+    if DEBUG:
+        print('fmin s11=%.3f'%(fAxis.min()))
+        print('fmax s11=%.3f'%(fAxis.max()))
+        print('fmin z11=%.3f'%(fdata.min()))
+        print('fmax z11=%.3f'%(fdata.max()))
+    z_real=interp.interp1d(fdata,zdata.real)(fAxis)
+    z_imag=interp.interp1d(fdata,zdata.imag)(fAxis)
+    return z_real+1j*z_imag
+    
+                    
 
 class MetaData():
     def __init__(self):
@@ -187,6 +202,8 @@ def readAnritsu(fname,comment=''):
 def readS1P(fileName,mode='simu',comment=''):
     fileLines=open(fileName).readlines()
     cstFlag=False
+    reim=False
+    db=False
     data=[]
     freqs=[]
     for line in fileLines:
@@ -205,10 +222,23 @@ def readS1P(fileName,mode='simu',comment=''):
             elif 'kHz' in line or 'KHZ' in line:
                 mFactor=1e-6
                 fUnit='kHz'
+        if ' RI ' in line:
+            reim=True
+        elif ' DB ' in line:
+            reim=False
+            db=True
+            
         if not(line[0]=='!' or line[0] =='#'):
             splitLine=line.split()
             freqs.append(float(splitLine[0]))
-            data.append(float(splitLine[1])*np.exp(1j*np.radians(float(splitLine[2]))))
+            if not reim:
+                if db:
+                    data.append(10.**(float(splitLine[1])/10.)*np.exp(1j*np.radians(float(splitLine[2]))))
+                else:
+                    data.append(float(splitLine[1])*np.exp(1j*np.radians(float(splitLine[2]))))
+            else:
+                data.append(float(splitLine[1])+1j*float(splitLine[2]))
+            
     data=np.array(data)
     freqs=np.array(freqs)*mFactor
     #print np.diff(freqs)
@@ -291,8 +321,8 @@ def readCSTTimeTrace(fileName,comment=''):
     inputTrace=np.array(inputTrace)
     outputTrace1=np.array(outputTrace1)
     outputTrace2=np.array(outputTrace2)
-    print('len(inputtrace=%d'%(len(inputTrace)))
-    print('len(outputtrace=%d'%(len(outputTrace1)))
+    #print('len(inputtrace=%d'%(len(inputTrace)))
+    #print('len(outputtrace=%d'%(len(outputTrace1)))
     if(len(inputTrace)>0):
         inputTrace[:,0]*=tFactor
     if(len(outputTrace1)>0):
@@ -357,6 +387,8 @@ class GainData():
         self.metaData=MetaData()
         
     def read_files(self,fileName,fileType,fMin=None,fMax=None,windowFunction=None,comment='',filterNegative=False,extrapolateBand=False,changeZ=False,z0=100,z1=100):
+        if DEBUG:
+            print fileType
         assert fileType in FILETYPES
         if(windowFunction is None):
             windowFunction = 'blackman-harris'
@@ -448,7 +480,50 @@ class GainData():
         if changeZ:
             self.change_impedance(z0,z1)
             
+    def gain_approx(self,gammaF=None,fGammaf=None,domain='freq'):
+        '''
+        approximate gain calculation from Patra 2016 using the zeroth delay. 
+        '''
+        if gammaF is None:
+            gammaF=self.gainDelay[self.fAxis.shape[0]/2]
+        else:
+            fgr=interp.interp1d(fGammaf,gammaF.real)
+            fgi=interp.interp1d(fGammaf,gammaF.imag)
+            gammaF=fgr(self.fAxis)+1j*fgi(self.fAxis)
+        outputGain=(self.gainFrequency-gammaF)*gammaF/(1+gammaF)+(1-gammaF)
+        if domain=='delay':
+            wF=signal.blackmanharris(len(self.fAxis))
+            #wF/=np.sqrt(np.mean(wF**2.))
+            return fft.fftshift(fft.ifft(fft.fftshift(outputGain*wF)))
+        else:
+            return outputGain
 
+    
+    def delay_kernel(self,gammaF=None,fGammaf=None,normed=True):
+        '''
+        derive delay-kernel
+        '''
+        if self.metaData.dtype[1]=='PlaneWave Excitation':
+            g=self.gainDelay
+        else:
+            g=dkernel=self.gain_approx(gammaF=gammaF,fGammaf=fGammaf,domain='delay')
+        dkernel=signal.fftconvolve(g,g[::-1],mode='same')
+        if normed:
+            dkernel/=dkernel.max()
+        return dkernel
+
+    def get_impedance(self,z0,isant=False):
+        '''
+        get the differential impedance of the antenna terminals.
+        '''
+        if type(z0) == str:
+            #string option will read in an s2p or txt file and
+            z0=read_z_interp(self.fAxis,z0)
+        if isant:
+            return z0*(1-self.gainFrequency)/(1+self.gainFrequency)
+        else:
+            return z0*(1.+self.gainFrequency)/(1-self.gainFrequency)
+    
     def change_impedance(self,z0,z1):
         '''
         change the reference impedance.
@@ -456,12 +531,18 @@ class GainData():
         z0: original reference impedance
         z1: new reference impedance
         '''
+        print 'changing impedance!'
+        if type(z0)==str:
+            z0=read_z_interp(self.fAxis,z0)
+        if type(z1)==str:
+            z1=read_z_interp(self.fAxis,z1)
         za=z0*(1+self.gainFrequency)/(1-self.gainFrequency)
         za=za.real+1j*za.imag
         self.gainFrequency=(za-z1)/(za+z1)
         wF=signal.blackmanharris(len(self.fAxis))
         wF/=np.sqrt(np.mean(wF**2.))
         self.gainDelay=fft.fftshift(fft.ifft(fft.fftshift(self.gainFrequency*wF)))
+    
         
         
     def export_CST_freq_s11(self,outfile):
